@@ -59,7 +59,7 @@ export default function AdminBookingsPage() {
               <p className="font-mono font-bold text-primary text-sm">{b.tracking_id}</p>
               <p className="text-sm text-muted-foreground">{b.profiles?.full_name || "Unknown"} • {b.packages?.name || "N/A"}</p>
             </div>
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${b.status === "completed" ? "text-emerald bg-emerald/10" : b.status === "cancelled" ? "text-destructive bg-destructive/10" : "text-primary bg-primary/10"}`}>
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${b.status === "completed" ? "text-emerald bg-emerald/10" : b.status === "cancelled" ? "text-destructive bg-destructive/10" : b.status === "ticket_issued" ? "text-emerald bg-emerald/10" : "text-primary bg-primary/10"}`}>
               {b.status}
             </span>
           </div>

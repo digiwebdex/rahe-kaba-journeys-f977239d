@@ -2,14 +2,15 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
-import { Search, Package, CheckCircle2, Clock, Plane, FileCheck, Loader2, History, X, User } from "lucide-react";
+import { Search, Package, CheckCircle2, Clock, Plane, FileCheck, Loader2, History, X, User, ShieldCheck } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
 const STATUS_STEPS = [
   { key: "pending", label: "Pending", icon: Clock },
+  { key: "confirmed", label: "Confirmed", icon: ShieldCheck },
   { key: "visa_processing", label: "Visa Processing", icon: FileCheck },
-  { key: "ticket_confirmed", label: "Ticket Confirmed", icon: Plane },
+  { key: "ticket_issued", label: "Ticket Issued", icon: Plane },
   { key: "completed", label: "Completed", icon: CheckCircle2 },
 ];
 
@@ -126,7 +127,8 @@ const TrackBooking = () => {
       case "completed": return "bg-emerald/10 text-emerald";
       case "pending": return "bg-primary/10 text-primary";
       case "visa_processing": return "bg-primary/10 text-primary";
-      case "ticket_confirmed": return "bg-primary/10 text-primary";
+      case "confirmed": return "bg-primary/10 text-primary";
+      case "ticket_issued": return "bg-primary/10 text-primary";
       case "cancelled": return "bg-destructive/10 text-destructive";
       default: return "bg-muted text-muted-foreground";
     }
