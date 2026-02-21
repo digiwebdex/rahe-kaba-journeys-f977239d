@@ -1,79 +1,75 @@
 
 
-## Complete Accounting System
+## Customer Financial Report
 
-### Current State
-- The `transactions` table already exists in the database with columns: `type`, `category`, `booking_id` (nullable FK to bookings), `user_id`, `amount`, `date`, `note`. RLS is admin-only for writes.
-- The `expenses` table is a separate, simpler table used by the current accounting page.
-- The current `AdminAccountingPage.tsx` only supports adding basic expenses -- no income, no booking/customer assignment, no profit calculations.
+### Overview
+Add a detailed financial report view when admin clicks on a customer in the Customers page. The report will show all financial data for that customer and include a print-friendly layout.
 
-### Plan
+### Implementation
 
-#### 1. Database Migration -- Add `customer_id` column to `transactions`
+#### 1. New Component: `src/components/admin/CustomerFinancialReport.tsx`
 
-Add a nullable `customer_id` (uuid) column to the `transactions` table so expenses/income can be assigned to a specific customer (profile). This enables "profit per customer" calculations.
+A dialog/sheet that opens when an admin clicks a customer row, showing:
 
-```sql
-ALTER TABLE public.transactions ADD COLUMN customer_id uuid;
+**A. Customer Info Header**
+- Full name, phone, passport number, address, join date
+
+**B. Booking Details Table**
+- All bookings for this customer (from `bookings` table where `user_id` matches)
+- Columns: Tracking ID, Package Name, Travelers, Total Amount, Paid, Due, Status
+
+**C. Payment History Table**
+- All payments for this customer (from `payments` where `user_id` matches)
+- Columns: Booking Tracking ID, Installment #, Amount, Due Date, Status, Paid Date
+
+**D. Expenses Assigned**
+- All expense transactions assigned to this customer (from `transactions` where `type = 'expense'` and `booking_id` matches customer's bookings)
+- Columns: Title, Category, Amount, Date, Linked Booking
+
+**E. Financial Summary Cards**
+- Total Revenue (sum of completed payments)
+- Total Expenses (sum of assigned expense transactions)
+- Net Profit (Revenue - Expenses)
+- Total Due (sum of pending payment amounts)
+
+**F. Print Button**
+- Uses `window.print()` with a print-specific CSS class that hides the sidebar/nav and formats the report cleanly on paper
+
+#### 2. Update `src/pages/admin/AdminCustomersPage.tsx`
+
+- Make each customer row clickable
+- Add state for selected customer
+- Render `CustomerFinancialReport` dialog when a customer is selected
+- Fetch related data (bookings, payments, transactions) when a customer is selected
+
+#### 3. Print Styles in `src/index.css`
+
+Add `@media print` rules:
+- Hide sidebar, nav, and dialog backdrop
+- Show only the report content
+- Clean formatting for tables and summary cards
+
+### Data Fetching (on customer click)
+
+```
+bookings: supabase.from("bookings").select("*, packages(name)").eq("user_id", customer.user_id)
+payments: supabase.from("payments").select("*, bookings(tracking_id)").eq("user_id", customer.user_id)
+transactions: supabase.from("transactions").select("*").in("booking_id", [customer's booking IDs])
 ```
 
-No new RLS policies needed -- existing admin-only policy covers this.
+### Calculation Logic
 
-#### 2. Rewrite `AdminAccountingPage.tsx`
+- **Total Revenue** = sum of `payments` where `status = 'completed'`
+- **Total Expenses** = sum of `transactions` where `type = 'expense'` and `booking_id` is in customer's bookings
+- **Net Profit** = Total Revenue - Total Expenses
+- **Total Due** = sum of `payments` where `status = 'pending'`
+- All values use `Number()` conversion for financial accuracy
 
-Replace the current expense-only page with a full accounting interface containing:
-
-**A. Summary Cards (top row)**
-- Total Income
-- Total Expenses  
-- Net Revenue (Income - Expenses)
-
-**B. Tabbed Interface**
-- **All Transactions** tab: Combined list of income and expenses, filterable by type
-- **Per Booking Profit** tab: Table showing each booking with its total income (completed payments) vs assigned expenses, calculating profit per booking
-- **Per Customer Profit** tab: Table grouped by customer showing aggregated income vs expenses
-
-**C. Add Transaction Form**
-- Type selector: Income / Expense
-- Title, Amount, Category
-- Optional: Assign to Booking (dropdown of bookings with tracking IDs)
-- Optional: Assign to Customer (dropdown of customer profiles)
-- Note field
-- All calculations use `Number()` with proper rounding to guarantee financial accuracy
-
-**D. Transaction List**
-- Each row shows: title, type badge (green for income, red for expense), category, assigned booking tracking ID (if any), assigned customer name (if any), amount, date
-- Delete button for each transaction
-
-#### 3. Calculation Logic (client-side, from fetched data)
-
-All computed from the `transactions` table plus `payments` table:
-
-- **Revenue** = Sum of all transactions where `type = 'income'`
-- **Total Expenses** = Sum of all transactions where `type = 'expense'`
-- **Net Revenue** = Revenue - Total Expenses
-- **Profit per Booking** = (completed payments for that booking) - (sum of expense transactions assigned to that booking)
-- **Profit per Customer** = (completed payments for that customer's bookings) - (sum of expense transactions assigned to that customer)
-
-Negative values are displayed but clearly styled (red) -- they represent losses, which is valid accounting unlike the payment due system.
-
-#### 4. Data Fetching
-
-The page will fetch:
-- `transactions` table with joins to `bookings(tracking_id)` 
-- `payments` table (completed only) with joins to `bookings(tracking_id, user_id)`
-- `bookings` with `packages(name)` and `profiles(full_name)` for dropdowns and profit tables
-- `profiles` for customer dropdown
-
-#### 5. Files Changed
+### Files Changed
 
 | File | Action |
 |------|--------|
-| `src/pages/admin/AdminAccountingPage.tsx` | Full rewrite |
-| Database migration | Add `customer_id` column to `transactions` |
+| `src/components/admin/CustomerFinancialReport.tsx` | Create |
+| `src/pages/admin/AdminCustomersPage.tsx` | Update (add click handler + dialog) |
+| `src/index.css` | Add print media styles |
 
-### Technical Notes
-
-- The existing `expenses` table remains untouched (used by dashboard/reports). The `transactions` table is the single source of truth for the accounting module.
-- Financial accuracy is guaranteed by using `Number()` conversions consistently and `toLocaleString()` for display formatting.
-- All data is protected by existing RLS policies (admin-only on `transactions`).
