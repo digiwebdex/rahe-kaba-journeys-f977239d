@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Menu, X, Phone } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Menu, X, Phone, User } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import logo from "@/assets/logo.jpg";
 
@@ -13,6 +14,15 @@ const navLinks = [
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setUser(session?.user || null);
+    });
+    supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user || null));
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-md border-b border-border">
@@ -42,6 +52,17 @@ const Navbar = () => {
             <Phone className="h-4 w-4" />
             +880 1601-505050
           </a>
+          {user ? (
+            <a href="/dashboard" className="flex items-center gap-2 text-sm text-primary border border-primary/40 px-4 py-2.5 rounded-md hover:bg-primary/10 transition-colors">
+              <User className="h-4 w-4" />
+              Dashboard
+            </a>
+          ) : (
+            <a href="/auth" className="flex items-center gap-2 text-sm text-primary border border-primary/40 px-4 py-2.5 rounded-md hover:bg-primary/10 transition-colors">
+              <User className="h-4 w-4" />
+              Sign In
+            </a>
+          )}
           <a
             href="#packages"
             className="bg-gradient-gold text-primary-foreground font-semibold px-6 py-2.5 rounded-md text-sm hover:opacity-90 transition-opacity"
@@ -49,10 +70,6 @@ const Navbar = () => {
             Book Now
           </a>
         </div>
-
-        <button className="lg:hidden text-foreground" onClick={() => setOpen(!open)}>
-          {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
       </div>
 
       <AnimatePresence>
