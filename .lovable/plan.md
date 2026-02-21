@@ -1,68 +1,75 @@
 
 
-## Reports System
+## Expanded CMS System
 
-### Overview
-Complete rewrite of `AdminReportsPage.tsx` with 7 report types, date filtering, and PDF/Excel export. Two new dependencies needed: `jspdf` + `jspdf-autotable` for PDF export and `xlsx` for Excel export.
+### Current State
+The CMS already manages 6 sections via the `site_content` table: hero, services, about, contact, footer, navbar. The `AdminCmsEditor` component renders a config-driven accordion UI. The `PackagesSection` on the homepage is hardcoded (not CMS-driven). There are no banners, announcements, or special notice sections.
 
-### New Dependencies
-- `jspdf` and `jspdf-autotable` -- Generate PDF reports with tables
-- `xlsx` -- Generate Excel (.xlsx) files for download
+### Plan
 
-### Report Types (Tabs)
+#### 1. Database -- Insert new `site_content` rows
 
-| Tab | Data Source | Columns |
-|-----|------------|---------|
-| **Daily Report** | Bookings + payments filtered to a selected date | Date, Tracking ID, Package, Amount, Paid, Due, Status |
-| **Monthly Report** | Aggregated by month (selectable month/year) | Month, Total Bookings, Revenue, Expenses, Net Profit |
-| **Yearly Report** | Aggregated by year (selectable year) | Year, Total Bookings, Revenue, Expenses, Net Profit |
-| **Package-wise Revenue** | Bookings grouped by package name/type | Package Name, Type, Bookings Count, Total Revenue, Expenses, Profit |
-| **Hajji-wise Revenue** | Bookings grouped by individual customer (user) | Customer Name, Phone, Bookings, Revenue Collected, Due, Expenses, Profit |
-| **Due Report** | Payments where status = 'pending' | Tracking ID, Customer, Installment, Amount, Due Date |
-| **Overdue Report** | Pending payments where due_date < today | Tracking ID, Customer, Installment, Amount, Due Date, Days Overdue |
+Insert 4 new rows into `site_content` for the new sections. No schema changes needed -- the existing JSONB `content` column handles any structure.
 
-### UI Layout
+```sql
+INSERT INTO site_content (section_key, content) VALUES
+('packages_section', '{"section_label":"Our Packages","heading":"Choose Your","heading_highlight":"Journey","description":"Flexible packages designed for every budget — installment payment available","items":[{"name":"Umrah Economy","price":"৳85,000","duration":"10 Days","popular":false,"features":["Return Air Ticket","3-Star Hotel","Visa Processing","Ground Transport","Ziyara Tour","Meal Included"]},{"name":"Umrah Premium","price":"৳1,50,000","duration":"14 Days","popular":true,"features":["Return Air Ticket","5-Star Hotel Near Haram","Visa Processing","VIP Transport","Full Ziyara","All Meals","Personal Guide","Laundry Service"]},{"name":"Hajj Package","price":"৳6,50,000","duration":"40 Days","popular":false,"features":["Return Air Ticket","Premium Accommodation","Visa Processing","Full Transport","Complete Ziyara","All Meals","Experienced Guide","Training Sessions"]}]}'),
+('banners', '{"items":[]}'),
+('announcements', '{"items":[]}'),
+('notices', '{"hajj_registration":{"enabled":false,"title":"Hajj Registration Open","description":"Register now for Hajj 2026. Limited seats available.","badge":"New","link":"/packages"},"ramadan_packages":{"enabled":false,"title":"Special Ramadan Umrah","description":"Perform Umrah during the blessed month of Ramadan.","badge":"Ramadan","link":"/packages"}}');
+```
 
-1. **Top bar**: Title + Export buttons (PDF / Excel)
-2. **Tab navigation**: 7 tabs for each report type
-3. **Filters row**: Date picker / month-year selector / year selector depending on active tab
-4. **Summary cards**: Key totals for the active report (e.g., total revenue, total due)
-5. **Data table**: Report data rendered in a table
+#### 2. Expand `SECTION_CONFIG` in `AdminCmsEditor.tsx`
 
-### Export Logic
+Add 4 new section configs to the existing `SECTION_CONFIG` object:
 
-**PDF Export** (`jspdf` + `jspdf-autotable`):
-- Creates a new PDF document with report title, date range, and a formatted table
-- Uses `jspdf-autotable` plugin to render table rows from the active report data
-- Triggers browser download
+**packages_section** -- Section heading text + package items (array with name, price, duration, popular toggle, features as newline-separated text)
 
-**Excel Export** (`xlsx`):
-- Converts active report table data into a worksheet
-- Creates a workbook, appends the sheet, and triggers download via `xlsx.writeFile()`
+**banners** -- Array of banner items with: title, description, image URL, link URL, enabled toggle
 
-### Data Fetching
+**announcements** -- Array of announcement items with: title, description, type (info/warning/success), enabled toggle, date
 
-Single `useEffect` loads all raw data on mount:
-- `bookings` with `packages(name, type)` join
-- `payments` with `bookings(tracking_id)` and profiles via `user_id`
-- `expenses` (from `expenses` table)
-- `profiles` for customer name lookups
-- `transactions` where `type = 'expense'` for per-booking/per-customer expense assignment
+**notices** -- Hajj Registration Notice (enabled, title, description, badge, link) and Ramadan Packages Notice (same fields)
 
-All report computations are `useMemo`-derived from the raw data + active filters.
+Also add a new field type `"toggle"` to the `FieldConfig` interface, rendered as a checkbox/switch for boolean fields like `enabled` and `popular`.
 
-### Files Changed
+#### 3. Update `PackagesSection.tsx` to use CMS data
+
+Replace the hardcoded `packages` array with `useSiteContent("packages_section")`. Fall back to current hardcoded data if no CMS content exists.
+
+#### 4. Add Banners + Announcements to Homepage (`Index.tsx`)
+
+Create two small components:
+
+**`src/components/AnnouncementBar.tsx`** -- A thin bar at the top of the page (below navbar) showing enabled announcements in a dismissable strip. Reads from `useSiteContent("announcements")`.
+
+**`src/components/NoticeSection.tsx`** -- Renders enabled notices (Hajj registration, Ramadan packages) as highlighted cards on the homepage between packages and about sections. Reads from `useSiteContent("notices")`.
+
+Banners from `useSiteContent("banners")` will render as a carousel/slider between the hero and services sections if any enabled banners exist.
+
+#### 5. Files Changed
 
 | File | Action |
 |------|--------|
-| `src/pages/admin/AdminReportsPage.tsx` | Full rewrite |
-| `src/lib/reportExport.ts` | New -- PDF and Excel export utility functions |
-| `package.json` | Add `jspdf`, `jspdf-autotable`, `xlsx` |
+| `src/components/AdminCmsEditor.tsx` | Add 4 new section configs + toggle field type |
+| `src/components/PackagesSection.tsx` | Use CMS content with fallback |
+| `src/components/AnnouncementBar.tsx` | New -- dismissable announcement strip |
+| `src/components/NoticeSection.tsx` | New -- Hajj/Ramadan notice cards |
+| `src/pages/Index.tsx` | Add AnnouncementBar, banner carousel, NoticeSection |
+| Database (data insert) | 4 new rows in `site_content` |
+
+### How It Works
+
+- Admin goes to CMS page, sees all sections including the 4 new ones
+- Edits banners, announcements, notices, or package display text
+- Clicks Save -- content updates in database instantly
+- Frontend components read from `useSiteContent()` with React Query (5-min stale time), so changes reflect on next page load or refresh
+- All new sections have sensible defaults/fallbacks so the site works even if CMS rows are empty
 
 ### Technical Notes
 
-- `date-fns` (already installed) used for date filtering/formatting
-- All financial values use `Number()` conversion for accuracy
-- Export functions receive a generic `{ title, columns, rows }` object so any tab can export
-- Currency formatted as `৳` (BDT) consistently
-- Overdue calculation: `differenceInDays(new Date(), parseISO(payment.due_date))`
+- No new database tables or columns needed -- leverages existing `site_content` JSONB structure
+- The toggle field type renders as a styled checkbox that stores `true`/`false` in the JSONB content
+- RLS already covers these rows (admin write, public read)
+- The `staleTime` of 5 minutes in `useSiteContent` means changes appear within 5 minutes without manual refresh, or instantly on hard refresh
+
