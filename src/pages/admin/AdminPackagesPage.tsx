@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, X, Edit2, Trash2, Save, ToggleLeft, ToggleRight } from "lucide-react";
+import { useIsViewer } from "@/components/admin/AdminLayout";
 
 const inputClass = "w-full bg-secondary border border-border rounded-md px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40";
 const TYPES = ["hajj", "umrah", "visa", "hotel", "transport", "ziyara"];
 
 export default function AdminPackagesPage() {
+  const isViewer = useIsViewer();
   const [packages, setPackages] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", type: "umrah", description: "", price: "", duration_days: "", image_url: "" });
@@ -69,10 +71,12 @@ export default function AdminPackagesPage() {
     <div>
       <div className="flex justify-between items-center mb-4">
         <h2 className="font-heading text-xl font-bold">Packages</h2>
-        <button onClick={() => setShowForm(!showForm)} className="bg-gradient-gold text-primary-foreground text-sm font-semibold px-4 py-2 rounded-md flex items-center gap-2">
-          {showForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-          {showForm ? "Cancel" : "Add Package"}
-        </button>
+        {!isViewer && (
+          <button onClick={() => setShowForm(!showForm)} className="bg-gradient-gold text-primary-foreground text-sm font-semibold px-4 py-2 rounded-md flex items-center gap-2">
+            {showForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+            {showForm ? "Cancel" : "Add Package"}
+          </button>
+        )}
       </div>
 
       {showForm && (
@@ -114,11 +118,13 @@ export default function AdminPackagesPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <p className="font-heading font-bold text-primary">৳{Number(p.price).toLocaleString()}</p>
-                  <button onClick={() => toggleActive(p)} className="text-muted-foreground hover:text-foreground" title={p.is_active ? "Deactivate" : "Activate"}>
-                    {p.is_active ? <ToggleRight className="h-5 w-5 text-emerald" /> : <ToggleLeft className="h-5 w-5" />}
-                  </button>
-                  <button onClick={() => startEdit(p)} className="text-muted-foreground hover:text-foreground"><Edit2 className="h-3.5 w-3.5" /></button>
-                  <button onClick={() => setDeleteId(p.id)} className="text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
+                  {!isViewer && (
+                    <button onClick={() => toggleActive(p)} className="text-muted-foreground hover:text-foreground" title={p.is_active ? "Deactivate" : "Activate"}>
+                      {p.is_active ? <ToggleRight className="h-5 w-5 text-emerald" /> : <ToggleLeft className="h-5 w-5" />}
+                    </button>
+                  )}
+                  {!isViewer && <button onClick={() => startEdit(p)} className="text-muted-foreground hover:text-foreground"><Edit2 className="h-3.5 w-3.5" /></button>}
+                  {!isViewer && <button onClick={() => setDeleteId(p.id)} className="text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>}
                 </div>
               </div>
             )}

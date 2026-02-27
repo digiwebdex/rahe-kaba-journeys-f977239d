@@ -6,11 +6,13 @@ import { toast } from "sonner";
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "./AdminSidebar";
+import { Eye } from "lucide-react";
 import type { AppRole } from "@/hooks/useUserRole";
 
 // Role context so child components can access the current admin role
 const AdminRoleContext = createContext<AppRole>(null);
 export const useAdminRole = () => useContext(AdminRoleContext);
+export const useIsViewer = () => useContext(AdminRoleContext) === "viewer";
 
 export default function AdminLayout() {
   useSessionTimeout();
@@ -38,6 +40,7 @@ export default function AdminLayout() {
       if (roles.includes("admin")) setRole("admin");
       else if (roles.includes("manager")) setRole("manager");
       else if (roles.includes("staff")) setRole("staff");
+      else if (roles.includes("viewer")) setRole("viewer");
       else { toast.error("Access denied"); navigate("/dashboard"); return; }
 
       setLoading(false);
@@ -63,6 +66,12 @@ export default function AdminLayout() {
               <SidebarTrigger />
               <span className="ml-auto text-xs text-muted-foreground capitalize bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">{role}</span>
             </header>
+            {role === "viewer" && (
+              <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-2 flex items-center gap-2 text-amber-700 text-sm">
+                <Eye className="h-4 w-4" />
+                <span className="font-medium">Read-Only Mode</span> — আপনি শুধুমাত্র দেখতে পারবেন, কোনো পরিবর্তন করতে পারবেন না।
+              </div>
+            )}
             <div className="flex-1 p-6 overflow-auto">
               <Outlet />
             </div>

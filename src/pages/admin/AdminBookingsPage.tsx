@@ -3,11 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Download, Edit2, Trash2, Save, X, Search } from "lucide-react";
 import { generateInvoice, CompanyInfo, InvoicePayment } from "@/lib/invoiceGenerator";
+import { useIsViewer } from "@/components/admin/AdminLayout";
 
 const inputClass = "w-full bg-secondary border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40";
 const STATUSES = ["pending", "confirmed", "visa_processing", "ticket_issued", "completed", "cancelled"];
 
 export default function AdminBookingsPage() {
+  const isViewer = useIsViewer();
   const [bookings, setBookings] = useState<any[]>([]);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -133,12 +135,16 @@ export default function AdminBookingsPage() {
                 <button onClick={() => handleDownloadInvoice(b)} disabled={generatingId === b.id} className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline disabled:opacity-50">
                   <Download className="h-3.5 w-3.5" /> {generatingId === b.id ? "Generating..." : "Invoice"}
                 </button>
-                <button onClick={() => startEdit(b)} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
-                  <Edit2 className="h-3.5 w-3.5" /> Edit
-                </button>
-                <button onClick={() => setDeleteId(b.id)} className="inline-flex items-center gap-1.5 text-xs text-destructive hover:underline">
-                  <Trash2 className="h-3.5 w-3.5" /> Delete
-                </button>
+                {!isViewer && (
+                  <button onClick={() => startEdit(b)} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+                    <Edit2 className="h-3.5 w-3.5" /> Edit
+                  </button>
+                )}
+                {!isViewer && (
+                  <button onClick={() => setDeleteId(b.id)} className="inline-flex items-center gap-1.5 text-xs text-destructive hover:underline">
+                    <Trash2 className="h-3.5 w-3.5" /> Delete
+                  </button>
+                )}
               </div>
             </>
           )}

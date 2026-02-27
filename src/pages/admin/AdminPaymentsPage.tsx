@@ -3,10 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Download, Edit2, Trash2, Save, X, Plus } from "lucide-react";
 import { generateReceipt, CompanyInfo, InvoicePayment } from "@/lib/invoiceGenerator";
+import { useIsViewer } from "@/components/admin/AdminLayout";
 
 const inputClass = "w-full bg-secondary border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40";
 
 export default function AdminPaymentsPage() {
+  const isViewer = useIsViewer();
   const [payments, setPayments] = useState<any[]>([]);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -101,10 +103,12 @@ export default function AdminPaymentsPage() {
     <div>
       <div className="flex justify-between items-center mb-4">
         <h2 className="font-heading text-xl font-bold">All Payments</h2>
-        <button onClick={() => { setShowAdd(!showAdd); if (!showAdd) loadBookings(); }} className="bg-gradient-gold text-primary-foreground text-sm font-semibold px-4 py-2 rounded-md flex items-center gap-2">
-          {showAdd ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-          {showAdd ? "Cancel" : "Add Payment"}
-        </button>
+        {!isViewer && (
+          <button onClick={() => { setShowAdd(!showAdd); if (!showAdd) loadBookings(); }} className="bg-gradient-gold text-primary-foreground text-sm font-semibold px-4 py-2 rounded-md flex items-center gap-2">
+            {showAdd ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+            {showAdd ? "Cancel" : "Add Payment"}
+          </button>
+        )}
       </div>
 
       {showAdd && (
@@ -182,8 +186,8 @@ export default function AdminPaymentsPage() {
                             <Download className="h-3 w-3" /> {generatingId === p.id ? "..." : "Receipt"}
                           </button>
                         )}
-                        <button onClick={() => startEdit(p)} className="text-xs text-muted-foreground hover:text-foreground"><Edit2 className="h-3 w-3" /></button>
-                        <button onClick={() => setDeleteId(p.id)} className="text-xs text-destructive hover:underline"><Trash2 className="h-3 w-3" /></button>
+                        {!isViewer && <button onClick={() => startEdit(p)} className="text-xs text-muted-foreground hover:text-foreground"><Edit2 className="h-3 w-3" /></button>}
+                        {!isViewer && <button onClick={() => setDeleteId(p.id)} className="text-xs text-destructive hover:underline"><Trash2 className="h-3 w-3" /></button>}
                       </div>
                     </td>
                   </>

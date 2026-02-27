@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Users, Edit2, Save, X, Search } from "lucide-react";
+import { useIsViewer } from "@/components/admin/AdminLayout";
 import CustomerFinancialReport from "@/components/admin/CustomerFinancialReport";
 
 const inputClass = "w-full bg-secondary border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40";
 
 export default function AdminCustomersPage() {
+  const isViewer = useIsViewer();
   const [customers, setCustomers] = useState<any[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -95,9 +97,11 @@ export default function AdminCustomersPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <p className="text-xs text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</p>
-                  <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="text-muted-foreground hover:text-foreground">
-                    <Edit2 className="h-3.5 w-3.5" />
-                  </button>
+                  {!isViewer && (
+                    <button onClick={(e) => { e.stopPropagation(); startEdit(c); }} className="text-muted-foreground hover:text-foreground">
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             )}
