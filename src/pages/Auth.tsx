@@ -201,14 +201,6 @@ const Auth = () => {
               className="w-full bg-gradient-gold text-primary-foreground font-semibold py-3 rounded-md text-sm hover:opacity-90 transition-opacity shadow-gold disabled:opacity-50">
               {loading ? t("auth.signingIn") : t("auth.signIn")}
             </button>
-            <div className="relative my-2">
-              <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
-              <div className="relative flex justify-center text-xs"><span className="bg-card px-2 text-muted-foreground">{t("auth.or")}</span></div>
-            </div>
-            <button type="button" onClick={() => setMode("otp")}
-              className="w-full border border-border text-foreground font-medium py-3 rounded-md text-sm hover:bg-secondary transition-colors flex items-center justify-center gap-2">
-              <Phone className="h-4 w-4" /> {t("auth.loginWithOtp")}
-            </button>
           </form>
         )}
 
