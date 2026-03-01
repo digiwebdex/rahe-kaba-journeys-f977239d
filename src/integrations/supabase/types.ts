@@ -136,6 +136,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          cost_price_per_person: number | null
           created_at: string
           due_amount: number | null
           guest_address: string | null
@@ -151,12 +152,15 @@ export type Database = {
           package_id: string
           paid_amount: number
           status: string
+          supplier_agent_id: string | null
           total_amount: number
+          total_cost: number | null
           tracking_id: string
           updated_at: string
           user_id: string | null
         }
         Insert: {
+          cost_price_per_person?: number | null
           created_at?: string
           due_amount?: number | null
           guest_address?: string | null
@@ -172,12 +176,15 @@ export type Database = {
           package_id: string
           paid_amount?: number
           status?: string
+          supplier_agent_id?: string | null
           total_amount: number
+          total_cost?: number | null
           tracking_id?: string
           updated_at?: string
           user_id?: string | null
         }
         Update: {
+          cost_price_per_person?: number | null
           created_at?: string
           due_amount?: number | null
           guest_address?: string | null
@@ -193,7 +200,9 @@ export type Database = {
           package_id?: string
           paid_amount?: number
           status?: string
+          supplier_agent_id?: string | null
           total_amount?: number
+          total_cost?: number | null
           tracking_id?: string
           updated_at?: string
           user_id?: string | null
@@ -226,6 +235,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_package_profit"
             referencedColumns: ["package_id"]
+          },
+          {
+            foreignKeyName: "bookings_supplier_agent_id_fkey"
+            columns: ["supplier_agent_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_agents"
+            referencedColumns: ["id"]
           },
         ]
       }
