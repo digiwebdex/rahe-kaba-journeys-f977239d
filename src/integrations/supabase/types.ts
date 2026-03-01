@@ -543,6 +543,57 @@ export type Database = {
         }
         Relationships: []
       }
+      moallem_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          date: string
+          id: string
+          moallem_id: string
+          notes: string | null
+          payment_method: string | null
+          recorded_by: string | null
+          wallet_account_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          date?: string
+          id?: string
+          moallem_id: string
+          notes?: string | null
+          payment_method?: string | null
+          recorded_by?: string | null
+          wallet_account_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          date?: string
+          id?: string
+          moallem_id?: string
+          notes?: string | null
+          payment_method?: string | null
+          recorded_by?: string | null
+          wallet_account_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moallem_payments_moallem_id_fkey"
+            columns: ["moallem_id"]
+            isOneToOne: false
+            referencedRelation: "moallems"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moallem_payments_wallet_account_id_fkey"
+            columns: ["wallet_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       moallems: {
         Row: {
           address: string | null
@@ -554,6 +605,8 @@ export type Database = {
           notes: string | null
           phone: string | null
           status: string
+          total_deposit: number
+          total_due: number
           updated_at: string
         }
         Insert: {
@@ -566,6 +619,8 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           status?: string
+          total_deposit?: number
+          total_due?: number
           updated_at?: string
         }
         Update: {
@@ -578,6 +633,8 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           status?: string
+          total_deposit?: number
+          total_due?: number
           updated_at?: string
         }
         Relationships: []
