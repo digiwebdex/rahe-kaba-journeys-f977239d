@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -15,6 +15,22 @@ export default function AdminCreateBookingPage() {
   const [loading, setLoading] = useState(false);
   const [packages, setPackages] = useState<any[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [phoneSuggestion, setPhoneSuggestion] = useState<any | null>(null);
+  const phoneDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const checkPhoneMatch = useCallback(async (phone: string) => {
+    const clean = phone.trim().replace(/[^\d+]/g, "");
+    if (clean.length < 5 || selectedCustomerId) { setPhoneSuggestion(null); return; }
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, phone, email, passport_number, address")
+        .ilike("phone", `%${clean}%`)
+        .limit(1)
+        .maybeSingle();
+      setPhoneSuggestion(data || null);
+    } catch { setPhoneSuggestion(null); }
+  }, [selectedCustomerId]);
 
   const [form, setForm] = useState({
     guest_name: "",
@@ -45,6 +61,7 @@ export default function AdminCreateBookingPage() {
   const handleCustomerSelect = (customer: any | null) => {
     if (customer) {
       setSelectedCustomerId(customer.user_id);
+      setPhoneSuggestion(null);
       setForm((prev) => ({
         ...prev,
         guest_name: customer.full_name || "",
@@ -203,9 +220,28 @@ export default function AdminCreateBookingPage() {
             <label className="text-xs text-muted-foreground block mb-1">ফোন নম্বর *</label>
             <div className="relative">
               <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <input className={`${inputClass} pl-9`} value={form.guest_phone} onChange={(e) => setForm({ ...form, guest_phone: e.target.value })}
+              <input className={`${inputClass} pl-9`} value={form.guest_phone}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setForm({ ...form, guest_phone: val });
+                  if (phoneDebounceRef.current) clearTimeout(phoneDebounceRef.current);
+                  phoneDebounceRef.current = setTimeout(() => checkPhoneMatch(val), 400);
+                }}
                 placeholder="+8801XXXXXXXXX" maxLength={15} />
             </div>
+            {phoneSuggestion && !selectedCustomerId && (
+              <button
+                type="button"
+                onClick={() => { handleCustomerSelect(phoneSuggestion); setPhoneSuggestion(null); }}
+                className="mt-1.5 w-full flex items-center gap-2 bg-accent/60 border border-primary/20 rounded-md px-3 py-2 text-left hover:bg-accent transition-colors"
+              >
+                <User className="h-4 w-4 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate">{phoneSuggestion.full_name || "—"} — {phoneSuggestion.phone}</p>
+                  <p className="text-[10px] text-muted-foreground">এই কাস্টমার আগে থেকে আছে — ক্লিক করে সিলেক্ট করুন</p>
+                </div>
+              </button>
+            )}
           </div>
           <div>
             <label className="text-xs text-muted-foreground block mb-1">ইমেইল</label>
