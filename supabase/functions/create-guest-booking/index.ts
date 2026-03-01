@@ -155,6 +155,7 @@ Deno.serve(async (req) => {
         guest_passport: passportNumber?.trim() || null,
         status: "pending",
         paid_amount: 0,
+        due_amount: totalAmount,
       })
       .select("id, tracking_id")
       .single();

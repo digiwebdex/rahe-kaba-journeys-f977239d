@@ -203,7 +203,7 @@ export default function AdminBookingsPage() {
       notes: `Duplicated from ${b.tracking_id}`, guest_name: b.guest_name,
       guest_phone: b.guest_phone, guest_email: b.guest_email,
       guest_address: b.guest_address, guest_passport: b.guest_passport,
-      status: "pending", paid_amount: 0,
+      status: "pending", paid_amount: 0, due_amount: Number(b.total_amount),
     });
     if (error) { toast.error(error.message); return; }
     toast.success("বুকিং ডুপ্লিকেট হয়েছে");
