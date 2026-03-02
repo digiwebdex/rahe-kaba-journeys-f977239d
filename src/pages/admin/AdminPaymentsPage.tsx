@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Download, Edit2, Trash2, Save, X, Plus, Wallet, Search, CheckCircle, XCircle, Users } from "lucide-react";
+import { Download, Edit2, Trash2, Save, X, Plus, Wallet, Search, CheckCircle, XCircle } from "lucide-react";
 import { generateReceipt, CompanyInfo, InvoicePayment } from "@/lib/invoiceGenerator";
 import { getCompanyInfoForPdf } from "@/lib/entityPdfGenerator";
 import { useIsViewer, useCanModifyFinancials } from "@/components/admin/AdminLayout";
@@ -20,13 +20,14 @@ const PAYMENT_METHODS = [
   { value: "manual", label: "Manual" },
 ];
 
-type PaymentType = "customer" | "moallem";
+type PaymentType = "customer" | "moallem" | "supplier";
 
 export default function AdminPaymentsPage() {
   const isViewer = useIsViewer();
   const canModify = useCanModifyFinancials();
   const [payments, setPayments] = useState<any[]>([]);
   const [moallemPayments, setMoallemPayments] = useState<any[]>([]);
+  const [supplierPayments, setSupplierPayments] = useState<any[]>([]);
   const [walletAccounts, setWalletAccounts] = useState<any[]>([]);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -34,7 +35,7 @@ export default function AdminPaymentsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteType, setDeleteType] = useState<PaymentType>("customer");
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewTab, setViewTab] = useState<"all" | "customer" | "moallem">("all");
+  const [viewTab, setViewTab] = useState<"all" | "customer" | "moallem" | "supplier">("all");
 
   const [showAddModal, setShowAddModal] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -44,19 +45,25 @@ export default function AdminPaymentsPage() {
   const [customerBookings, setCustomerBookings] = useState<any[]>([]);
   const [moallems, setMoallems] = useState<any[]>([]);
   const [moallemBookings, setMoallemBookings] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [supplierBookings, setSupplierBookings] = useState<any[]>([]);
   const [paymentType, setPaymentType] = useState<PaymentType>("customer");
   const [addForm, setAddForm] = useState({
     customer_id: "", booking_id: "", amount: "",
     payment_method: "cash", transaction_id: "", paid_date: new Date().toISOString().split("T")[0],
-    notes: "", wallet_account_id: "", moallem_id: "",
+    notes: "", wallet_account_id: "", moallem_id: "", supplier_id: "",
   });
   const [addLoading, setAddLoading] = useState(false);
   const [selectedBookingInfo, setSelectedBookingInfo] = useState<any>(null);
+  const [markPaidId, setMarkPaidId] = useState<string | null>(null);
+  const [markPaidWallet, setMarkPaidWallet] = useState("");
+  const [viewPayment, setViewPayment] = useState<any>(null);
 
   const fetchPayments = async () => {
-    const [payRes, moallemPayRes, walletRes, profileRes] = await Promise.all([
+    const [payRes, moallemPayRes, supplierPayRes, walletRes, profileRes] = await Promise.all([
       supabase.from("payments").select("*, bookings(tracking_id, total_amount, paid_amount, due_amount, guest_name, guest_passport, num_travelers, status, packages(name, type, duration_days))").order("created_at", { ascending: false }),
       supabase.from("moallem_payments").select("*, moallems(name, phone), bookings:booking_id(tracking_id, total_amount, paid_amount, due_amount, paid_by_moallem, moallem_due, guest_name, packages(name, type))").order("created_at", { ascending: false }),
+      supabase.from("supplier_agent_payments").select("*, supplier_agents(agent_name, company_name), bookings:booking_id(tracking_id, total_amount, total_cost, paid_to_supplier, supplier_due, guest_name, packages(name, type))").order("created_at", { ascending: false }),
       supabase.from("accounts" as any).select("*").eq("type", "asset"),
       supabase.from("profiles").select("user_id, full_name, phone"),
     ]);
@@ -71,6 +78,10 @@ export default function AdminPaymentsPage() {
       ...p,
       _type: "moallem" as PaymentType,
     })));
+    setSupplierPayments((supplierPayRes.data || []).map((p: any) => ({
+      ...p,
+      _type: "supplier" as PaymentType,
+    })));
     setWalletAccounts((walletRes.data as any[]) || []);
   };
 
@@ -80,19 +91,22 @@ export default function AdminPaymentsPage() {
     setShowAddModal(true);
     setPaymentType("customer");
     resetAddForm();
-    const [{ data: profileData }, { data: moallemData }] = await Promise.all([
+    const [{ data: profileData }, { data: moallemData }, { data: supplierData }] = await Promise.all([
       supabase.from("profiles").select("user_id, full_name, phone").order("full_name"),
       supabase.from("moallems").select("id, name, phone, total_due, total_deposit").eq("status", "active").order("name"),
+      supabase.from("supplier_agents").select("id, agent_name, company_name, phone").eq("status", "active").order("agent_name"),
     ]);
     setCustomers(profileData || []);
     setMoallems(moallemData || []);
+    setSuppliers(supplierData || []);
   };
 
   const resetAddForm = () => {
-    setAddForm({ customer_id: "", booking_id: "", amount: "", payment_method: "cash", transaction_id: "", paid_date: new Date().toISOString().split("T")[0], notes: "", wallet_account_id: "", moallem_id: "" });
+    setAddForm({ customer_id: "", booking_id: "", amount: "", payment_method: "cash", transaction_id: "", paid_date: new Date().toISOString().split("T")[0], notes: "", wallet_account_id: "", moallem_id: "", supplier_id: "" });
     setSelectedBookingInfo(null);
     setCustomerBookings([]);
     setMoallemBookings([]);
+    setSupplierBookings([]);
   };
 
   const handlePaymentTypeChange = (type: PaymentType) => {
@@ -150,14 +164,29 @@ export default function AdminPaymentsPage() {
     setMoallemBookings(data || []);
   };
 
+  const handleSupplierChange = async (supplierId: string) => {
+    setAddForm((prev) => ({ ...prev, supplier_id: supplierId, booking_id: "" }));
+    setSelectedBookingInfo(null);
+    if (!supplierId) { setSupplierBookings([]); return; }
+    
+    const { data } = await supabase.from("bookings")
+      .select("id, tracking_id, total_amount, total_cost, paid_to_supplier, supplier_due, guest_name, packages(name)")
+      .eq("supplier_agent_id", supplierId)
+      .order("created_at", { ascending: false });
+    
+    setSupplierBookings(data || []);
+  };
+
   const handleBookingChange = (bookingId: string) => {
+    let booking: any = null;
     if (paymentType === "customer") {
-      const booking = customerBookings.find((b) => b.id === bookingId);
-      setSelectedBookingInfo(booking);
+      booking = customerBookings.find((b) => b.id === bookingId);
+    } else if (paymentType === "moallem") {
+      booking = moallemBookings.find((b) => b.id === bookingId);
     } else {
-      const booking = moallemBookings.find((b) => b.id === bookingId);
-      setSelectedBookingInfo(booking);
+      booking = supplierBookings.find((b) => b.id === bookingId);
     }
+    setSelectedBookingInfo(booking);
     setAddForm((prev) => ({ ...prev, booking_id: bookingId }));
   };
 
@@ -185,8 +214,7 @@ export default function AdminPaymentsPage() {
         resetAddForm();
         fetchPayments();
       } catch (err: any) { toast.error(err.message); } finally { setAddLoading(false); }
-    } else {
-      // Moallem payment
+    } else if (paymentType === "moallem") {
       if (!addForm.moallem_id) { toast.error("মোয়াল্লেম নির্বাচন করুন"); return; }
       setAddLoading(true);
       try {
@@ -203,6 +231,28 @@ export default function AdminPaymentsPage() {
         });
         if (error) throw error;
         toast.success("মোয়াল্লেম পেমেন্ট সফলভাবে যোগ হয়েছে");
+        setShowAddModal(false);
+        resetAddForm();
+        fetchPayments();
+      } catch (err: any) { toast.error(err.message); } finally { setAddLoading(false); }
+    } else {
+      // Supplier payment
+      if (!addForm.supplier_id) { toast.error("সাপ্লায়ার নির্বাচন করুন"); return; }
+      setAddLoading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const { error } = await supabase.from("supplier_agent_payments").insert({
+          supplier_agent_id: addForm.supplier_id,
+          booking_id: addForm.booking_id || null,
+          amount: parseFloat(addForm.amount),
+          payment_method: addForm.payment_method,
+          date: addForm.paid_date,
+          notes: addForm.notes.trim() || null,
+          wallet_account_id: addForm.wallet_account_id || null,
+          recorded_by: session?.user?.id || null,
+        });
+        if (error) throw error;
+        toast.success("সাপ্লায়ার পেমেন্ট সফলভাবে যোগ হয়েছে");
         setShowAddModal(false);
         resetAddForm();
         fetchPayments();
@@ -240,6 +290,9 @@ export default function AdminPaymentsPage() {
     if (deleteType === "moallem") {
       const { error } = await supabase.from("moallem_payments").delete().eq("id", deleteId);
       if (error) { toast.error(error.message); return; }
+    } else if (deleteType === "supplier") {
+      const { error } = await supabase.from("supplier_agent_payments").delete().eq("id", deleteId);
+      if (error) { toast.error(error.message); return; }
     } else {
       const { error } = await supabase.from("payments").delete().eq("id", deleteId);
       if (error) { toast.error(error.message); return; }
@@ -260,10 +313,6 @@ export default function AdminPaymentsPage() {
     setGeneratingId(null);
   };
 
-  const [markPaidId, setMarkPaidId] = useState<string | null>(null);
-  const [markPaidWallet, setMarkPaidWallet] = useState("");
-  const [viewPayment, setViewPayment] = useState<any>(null);
-
   // Combine and filter all payments
   const allCombined = useMemo(() => {
     const customerItems = payments.map(p => ({
@@ -282,7 +331,20 @@ export default function AdminPaymentsPage() {
       _trackingId: p.bookings?.tracking_id || "—",
       _amount: Number(p.amount),
     }));
-    let combined = viewTab === "customer" ? customerItems : viewTab === "moallem" ? moallemItems : [...customerItems, ...moallemItems];
+    const supplierItems = supplierPayments.map(p => ({
+      ...p,
+      _type: "supplier" as PaymentType,
+      _sortDate: p.date || p.created_at,
+      _displayName: p.supplier_agents?.agent_name || "—",
+      _trackingId: p.bookings?.tracking_id || "—",
+      _amount: Number(p.amount),
+    }));
+    let combined: any[] = [];
+    if (viewTab === "customer") combined = customerItems;
+    else if (viewTab === "moallem") combined = moallemItems;
+    else if (viewTab === "supplier") combined = supplierItems;
+    else combined = [...customerItems, ...moallemItems, ...supplierItems];
+    
     combined.sort((a, b) => new Date(b._sortDate).getTime() - new Date(a._sortDate).getTime());
     
     if (!searchQuery) return combined;
@@ -293,7 +355,15 @@ export default function AdminPaymentsPage() {
       p.payment_method?.toLowerCase().includes(q) ||
       (p as any).transaction_id?.toLowerCase().includes(q)
     );
-  }, [payments, moallemPayments, searchQuery, viewTab]);
+  }, [payments, moallemPayments, supplierPayments, searchQuery, viewTab]);
+
+  const getTypeBadge = (type: PaymentType) => {
+    if (type === "moallem") return { label: "মোয়াল্লেম", cls: "bg-accent/20 text-accent-foreground" };
+    if (type === "supplier") return { label: "সাপ্লায়ার", cls: "bg-destructive/10 text-destructive" };
+    return { label: "কাস্টমার", cls: "bg-primary/10 text-primary" };
+  };
+
+  const totalAll = payments.length + moallemPayments.length + supplierPayments.length;
 
   return (
     <div>
@@ -328,14 +398,15 @@ export default function AdminPaymentsPage() {
       </div>
 
       {/* View tabs */}
-      <div className="flex gap-1 mb-4 border-b border-border">
+      <div className="flex gap-1 mb-4 border-b border-border overflow-x-auto">
         {[
-          { key: "all" as const, label: `সব (${payments.length + moallemPayments.length})` },
+          { key: "all" as const, label: `সব (${totalAll})` },
           { key: "customer" as const, label: `কাস্টমার (${payments.length})` },
           { key: "moallem" as const, label: `মোয়াল্লেম (${moallemPayments.length})` },
+          { key: "supplier" as const, label: `সাপ্লায়ার (${supplierPayments.length})` },
         ].map(t => (
           <button key={t.key} onClick={() => setViewTab(t.key)}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${viewTab === t.key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${viewTab === t.key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
             {t.label}
           </button>
         ))}
@@ -356,12 +427,14 @@ export default function AdminPaymentsPage() {
             </tr>
           </thead>
           <tbody>
-            {allCombined.map((p: any) => (
+            {allCombined.map((p: any) => {
+              const badge = getTypeBadge(p._type);
+              return (
               <tr key={`${p._type}-${p.id}`} className="border-b border-border/50 cursor-pointer hover:bg-secondary/30 transition-colors"
                 onClick={() => { if (editingId !== p.id && markPaidId !== p.id) setViewPayment(p); }}>
                 {p._type === "customer" && editingId === p.id ? (
                   <>
-                    <td className="py-3 pr-4"><span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">কাস্টমার</span></td>
+                    <td className="py-3 pr-4"><span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span></td>
                     <td className="py-3 pr-4 font-mono text-xs">{p._trackingId}</td>
                     <td className="py-3 pr-4 text-xs">{p._displayName}</td>
                     <td className="py-3 pr-4"><input className={inputClass + " w-24"} type="number" value={editForm.amount} onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })} /></td>
@@ -386,33 +459,36 @@ export default function AdminPaymentsPage() {
                 ) : (
                   <>
                     <td className="py-3 pr-4">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${p._type === "moallem" ? "bg-accent/20 text-accent-foreground" : "bg-primary/10 text-primary"}`}>
-                        {p._type === "moallem" ? "মোয়াল্লেম" : "কাস্টমার"}
-                      </span>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
                     </td>
                     <td className="py-3 pr-4 font-mono text-xs">{p._trackingId}</td>
-                    <td className="py-3 pr-4 text-xs">{p._displayName}</td>
+                    <td className="py-3 pr-4 text-xs">
+                      {p._displayName}
+                      {p._type === "supplier" && p.supplier_agents?.company_name && (
+                        <span className="block text-muted-foreground">{p.supplier_agents.company_name}</span>
+                      )}
+                    </td>
                     <td className="py-3 pr-4 font-medium">{fmt(p._amount)}</td>
                     <td className="py-3 pr-4 capitalize text-xs">{p.payment_method || "—"}{p.transaction_id ? <span className="block text-muted-foreground">TxID: {p.transaction_id}</span> : ""}</td>
                     <td className="py-3 pr-4 text-xs">
-                      {p._type === "moallem" 
-                        ? (p.date ? new Date(p.date).toLocaleDateString() : "—")
-                        : (p.paid_at ? new Date(p.paid_at).toLocaleDateString() : p.due_date ? new Date(p.due_date).toLocaleDateString() : "—")
+                      {p._type === "customer"
+                        ? (p.paid_at ? new Date(p.paid_at).toLocaleDateString() : p.due_date ? new Date(p.due_date).toLocaleDateString() : "—")
+                        : (p.date ? new Date(p.date).toLocaleDateString() : "—")
                       }
                     </td>
                     <td className="py-3 pr-4">
-                      {p._type === "moallem" ? (
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full text-emerald bg-emerald/10">completed</span>
-                      ) : (
+                      {p._type === "customer" ? (
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${p.status === "completed" ? "text-emerald bg-emerald/10" : p.status === "pending" ? "text-primary bg-primary/10" : "text-destructive bg-destructive/10"}`}>
                           {p.status}
                         </span>
+                      ) : (
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full text-emerald bg-emerald/10">completed</span>
                       )}
                     </td>
                     <td className="py-3" onClick={(e) => e.stopPropagation()}>
-                      {p._type === "moallem" ? (
+                      {(p._type === "moallem" || p._type === "supplier") ? (
                         <AdminActionMenu inlineCount={1} actions={[
-                          { label: "Delete", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => { setDeleteId(p.id); setDeleteType("moallem"); }, variant: "destructive", hidden: !canModify },
+                          { label: "Delete", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => { setDeleteId(p.id); setDeleteType(p._type); }, variant: "destructive", hidden: !canModify },
                         ]} />
                       ) : p.status === "pending" && markPaidId === p.id ? (
                         <div className="flex items-center gap-1.5">
@@ -443,7 +519,8 @@ export default function AdminPaymentsPage() {
                   </>
                 )}
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -460,16 +537,17 @@ export default function AdminPaymentsPage() {
             <div>
               <label className="text-xs text-muted-foreground block mb-1">পেমেন্টের ধরন *</label>
               <div className="flex gap-2">
-                <button
-                  onClick={() => handlePaymentTypeChange("customer")}
-                  className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold border transition-colors ${paymentType === "customer" ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border text-muted-foreground hover:text-foreground"}`}>
-                  কাস্টমার পেমেন্ট
-                </button>
-                <button
-                  onClick={() => handlePaymentTypeChange("moallem")}
-                  className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold border transition-colors ${paymentType === "moallem" ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border text-muted-foreground hover:text-foreground"}`}>
-                  মোয়াল্লেম পেমেন্ট
-                </button>
+                {([
+                  { key: "customer" as PaymentType, label: "কাস্টমার" },
+                  { key: "moallem" as PaymentType, label: "মোয়াল্লেম" },
+                  { key: "supplier" as PaymentType, label: "সাপ্লায়ার" },
+                ] as const).map(t => (
+                  <button key={t.key}
+                    onClick={() => handlePaymentTypeChange(t.key)}
+                    className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-semibold border transition-colors ${paymentType === t.key ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border text-muted-foreground hover:text-foreground"}`}>
+                    {t.label}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -498,7 +576,7 @@ export default function AdminPaymentsPage() {
                   )}
                 </div>
               </>
-            ) : (
+            ) : paymentType === "moallem" ? (
               <>
                 <div>
                   <label className="text-xs text-muted-foreground block mb-1">মোয়াল্লেম নির্বাচন *</label>
@@ -522,6 +600,30 @@ export default function AdminPaymentsPage() {
                   )}
                 </div>
               </>
+            ) : (
+              <>
+                <div>
+                  <label className="text-xs text-muted-foreground block mb-1">সাপ্লায়ার এজেন্ট নির্বাচন *</label>
+                  <select className={inputClass} value={addForm.supplier_id} onChange={(e) => handleSupplierChange(e.target.value)}>
+                    <option value="">-- সাপ্লায়ার বাছাই করুন --</option>
+                    {suppliers.map((s) => (
+                      <option key={s.id} value={s.id}>{s.agent_name}{s.company_name ? ` (${s.company_name})` : ""}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground block mb-1">বুকিং নির্বাচন (ঐচ্ছিক)</label>
+                  <select className={inputClass} value={addForm.booking_id} onChange={(e) => handleBookingChange(e.target.value)} disabled={!addForm.supplier_id}>
+                    <option value="">-- নির্দিষ্ট বুকিং ছাড়া --</option>
+                    {supplierBookings.map((b) => (
+                      <option key={b.id} value={b.id}>{b.tracking_id} — {b.guest_name || "N/A"} (সাপ্লায়ার বকেয়া: {fmt(Number(b.supplier_due || 0))})</option>
+                    ))}
+                  </select>
+                  {addForm.supplier_id && supplierBookings.length === 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">এই সাপ্লায়ারের কোনো বুকিং নেই।</p>
+                  )}
+                </div>
+              </>
             )}
 
             {selectedBookingInfo && (
@@ -529,14 +631,20 @@ export default function AdminPaymentsPage() {
                 {paymentType === "customer" ? (
                   <>
                     <div><span className="text-muted-foreground block">মোট</span><span className="font-bold">{fmt(Number(selectedBookingInfo.total_amount))}</span></div>
-                    <div><span className="text-muted-foreground block">পরিশোধিত</span><span className="font-bold text-emerald-500">{fmt(Number(selectedBookingInfo.paid_amount))}</span></div>
+                    <div><span className="text-muted-foreground block">পরিশোধিত</span><span className="font-bold text-emerald">{fmt(Number(selectedBookingInfo.paid_amount))}</span></div>
                     <div><span className="text-muted-foreground block">বকেয়া</span><span className="font-bold text-destructive">{fmt(Number(selectedBookingInfo.due_amount || 0))}</span></div>
+                  </>
+                ) : paymentType === "moallem" ? (
+                  <>
+                    <div><span className="text-muted-foreground block">মোট</span><span className="font-bold">{fmt(Number(selectedBookingInfo.total_amount))}</span></div>
+                    <div><span className="text-muted-foreground block">মোয়াল্লেম পরিশোধিত</span><span className="font-bold text-emerald">{fmt(Number(selectedBookingInfo.paid_by_moallem || 0))}</span></div>
+                    <div><span className="text-muted-foreground block">মোয়াল্লেম বকেয়া</span><span className="font-bold text-destructive">{fmt(Number(selectedBookingInfo.moallem_due || 0))}</span></div>
                   </>
                 ) : (
                   <>
-                    <div><span className="text-muted-foreground block">মোট</span><span className="font-bold">{fmt(Number(selectedBookingInfo.total_amount))}</span></div>
-                    <div><span className="text-muted-foreground block">মোয়াল্লেম পরিশোধিত</span><span className="font-bold text-emerald-500">{fmt(Number(selectedBookingInfo.paid_by_moallem || 0))}</span></div>
-                    <div><span className="text-muted-foreground block">মোয়াল্লেম বকেয়া</span><span className="font-bold text-destructive">{fmt(Number(selectedBookingInfo.moallem_due || 0))}</span></div>
+                    <div><span className="text-muted-foreground block">মোট খরচ</span><span className="font-bold">{fmt(Number(selectedBookingInfo.total_cost || 0))}</span></div>
+                    <div><span className="text-muted-foreground block">সাপ্লায়ার পেইড</span><span className="font-bold text-emerald">{fmt(Number(selectedBookingInfo.paid_to_supplier || 0))}</span></div>
+                    <div><span className="text-muted-foreground block">সাপ্লায়ার বকেয়া</span><span className="font-bold text-destructive">{fmt(Number(selectedBookingInfo.supplier_due || 0))}</span></div>
                   </>
                 )}
               </div>
@@ -595,11 +703,13 @@ export default function AdminPaymentsPage() {
           <DialogHeader>
             <DialogTitle className="font-heading">পেমেন্ট বিবরণ</DialogTitle>
           </DialogHeader>
-          {viewPayment && (
+          {viewPayment && (() => {
+            const vBadge = getTypeBadge(viewPayment._type);
+            return (
             <div className="space-y-4 text-sm">
               <div className="mb-2">
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${viewPayment._type === "moallem" ? "bg-accent/20 text-accent-foreground" : "bg-primary/10 text-primary"}`}>
-                  {viewPayment._type === "moallem" ? "মোয়াল্লেম পেমেন্ট" : "কাস্টমার পেমেন্ট"}
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${vBadge.cls}`}>
+                  {viewPayment._type === "moallem" ? "মোয়াল্লেম পেমেন্ট" : viewPayment._type === "supplier" ? "সাপ্লায়ার পেমেন্ট" : "কাস্টমার পেমেন্ট"}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -619,9 +729,9 @@ export default function AdminPaymentsPage() {
                   </>
                 )}
                 <div><span className="text-muted-foreground text-xs block">তারিখ</span><span className="font-medium">
-                  {viewPayment._type === "moallem" 
-                    ? (viewPayment.date ? new Date(viewPayment.date).toLocaleDateString() : "—")
-                    : (viewPayment.paid_at ? new Date(viewPayment.paid_at).toLocaleDateString() : viewPayment.due_date ? new Date(viewPayment.due_date).toLocaleDateString() : "—")
+                  {viewPayment._type === "customer"
+                    ? (viewPayment.paid_at ? new Date(viewPayment.paid_at).toLocaleDateString() : viewPayment.due_date ? new Date(viewPayment.due_date).toLocaleDateString() : "—")
+                    : (viewPayment.date ? new Date(viewPayment.date).toLocaleDateString() : "—")
                   }
                 </span></div>
                 {viewPayment.transaction_id && (
@@ -633,7 +743,7 @@ export default function AdminPaymentsPage() {
                   <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">বুকিং তথ্য</h4>
                   <div className="grid grid-cols-3 gap-3 bg-secondary/50 rounded-lg p-3">
                     <div><span className="text-muted-foreground text-xs block">মোট</span><span className="font-bold">{fmt(Number(viewPayment.bookings.total_amount))}</span></div>
-                    <div><span className="text-muted-foreground text-xs block">পরিশোধিত</span><span className="font-bold text-emerald-500">{fmt(Number(viewPayment.bookings.paid_amount))}</span></div>
+                    <div><span className="text-muted-foreground text-xs block">পরিশোধিত</span><span className="font-bold text-emerald">{fmt(Number(viewPayment.bookings.paid_amount))}</span></div>
                     <div><span className="text-muted-foreground text-xs block">বকেয়া</span><span className="font-bold text-destructive">{fmt(Number(viewPayment.bookings.due_amount || 0))}</span></div>
                   </div>
                 </div>
@@ -643,8 +753,18 @@ export default function AdminPaymentsPage() {
                   <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">বুকিং তথ্য</h4>
                   <div className="grid grid-cols-3 gap-3 bg-secondary/50 rounded-lg p-3">
                     <div><span className="text-muted-foreground text-xs block">মোট</span><span className="font-bold">{fmt(Number(viewPayment.bookings.total_amount))}</span></div>
-                    <div><span className="text-muted-foreground text-xs block">মোয়াল্লেম পেইড</span><span className="font-bold text-emerald-500">{fmt(Number(viewPayment.bookings.paid_by_moallem || 0))}</span></div>
+                    <div><span className="text-muted-foreground text-xs block">মোয়াল্লেম পেইড</span><span className="font-bold text-emerald">{fmt(Number(viewPayment.bookings.paid_by_moallem || 0))}</span></div>
                     <div><span className="text-muted-foreground text-xs block">মোয়াল্লেম বকেয়া</span><span className="font-bold text-destructive">{fmt(Number(viewPayment.bookings.moallem_due || 0))}</span></div>
+                  </div>
+                </div>
+              )}
+              {viewPayment._type === "supplier" && viewPayment.bookings && (
+                <div className="border-t border-border/50 pt-3">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">বুকিং তথ্য</h4>
+                  <div className="grid grid-cols-3 gap-3 bg-secondary/50 rounded-lg p-3">
+                    <div><span className="text-muted-foreground text-xs block">মোট খরচ</span><span className="font-bold">{fmt(Number(viewPayment.bookings.total_cost || 0))}</span></div>
+                    <div><span className="text-muted-foreground text-xs block">সাপ্লায়ার পেইড</span><span className="font-bold text-emerald">{fmt(Number(viewPayment.bookings.paid_to_supplier || 0))}</span></div>
+                    <div><span className="text-muted-foreground text-xs block">সাপ্লায়ার বকেয়া</span><span className="font-bold text-destructive">{fmt(Number(viewPayment.bookings.supplier_due || 0))}</span></div>
                   </div>
                 </div>
               )}
@@ -652,7 +772,8 @@ export default function AdminPaymentsPage() {
                 <div><span className="text-muted-foreground text-xs block">নোট</span><p>{viewPayment.notes}</p></div>
               )}
             </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
