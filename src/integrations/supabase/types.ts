@@ -1135,6 +1135,7 @@ export type Database = {
           notes: string | null
           passport_number: string | null
           phone: string | null
+          status: string
           updated_at: string
           user_id: string
         }
@@ -1150,6 +1151,7 @@ export type Database = {
           notes?: string | null
           passport_number?: string | null
           phone?: string | null
+          status?: string
           updated_at?: string
           user_id: string
         }
@@ -1165,6 +1167,7 @@ export type Database = {
           notes?: string | null
           passport_number?: string | null
           phone?: string | null
+          status?: string
           updated_at?: string
           user_id?: string
         }
