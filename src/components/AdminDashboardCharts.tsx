@@ -93,17 +93,17 @@ const AdminDashboardCharts = ({
       {/* ═══ TOP KPI CARDS ═══ */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         {[
-          { label: "মোট বিক্রয়", value: fmt(totalSales), icon: DollarSign, color: "text-primary", onClick: undefined },
-          { label: "আয় প্রাপ্ত", value: fmt(totalIncome), icon: ArrowUpRight, color: "text-emerald", onClick: undefined },
-          { label: "নিট লাভ", value: fmt(netProfit), icon: TrendingUp, color: netProfit >= 0 ? "text-emerald" : "text-destructive", onClick: undefined },
-          { label: "ক্যাশ ব্যালেন্স", value: fmt(cashBank), icon: Wallet, color: "text-primary", onClick: undefined },
-          { label: "মোট বুকিং", value: bookings.length, icon: Package, color: "text-foreground", onClick: undefined },
-          { label: "মোট হাজী", value: totalHajji, icon: Users, color: "text-foreground", onClick: undefined },
+          { label: "মোট বিক্রয়", value: fmt(totalSales), icon: DollarSign, color: "text-primary", onClick: () => navigate("/admin/bookings") },
+          { label: "আয় প্রাপ্ত", value: fmt(totalIncome), icon: ArrowUpRight, color: "text-emerald", onClick: () => navigate("/admin/payments") },
+          { label: "নিট লাভ", value: fmt(netProfit), icon: TrendingUp, color: netProfit >= 0 ? "text-emerald" : "text-destructive", onClick: () => navigate("/admin/accounting") },
+          { label: "ক্যাশ ব্যালেন্স", value: fmt(cashBank), icon: Wallet, color: "text-primary", onClick: () => navigate("/admin/accounting") },
+          { label: "মোট বুকিং", value: bookings.length, icon: Package, color: "text-foreground", onClick: () => navigate("/admin/bookings") },
+          { label: "মোট হাজী", value: totalHajji, icon: Users, color: "text-foreground", onClick: () => navigate("/admin/customers") },
           { label: "কাস্টমার বকেয়া", value: fmt(customerDue), icon: UserCheck, color: customerDue > 0 ? "text-yellow-500" : "text-emerald", onClick: () => setShowDueCustomers(true) },
         ].map(k => (
           <div
             key={k.label}
-            className={`bg-card border border-border rounded-xl p-4 ${k.onClick ? "cursor-pointer hover:border-primary/50 transition-colors" : ""}`}
+            className="bg-card border border-border rounded-xl p-4 cursor-pointer hover:border-primary/50 transition-colors"
             onClick={k.onClick}
           >
             <div className="flex items-center justify-between mb-1">
@@ -122,9 +122,27 @@ const AdminDashboardCharts = ({
             <ArrowUpRight className="h-4 w-4 text-primary" /> প্রাপ্য (Receivable)
           </h3>
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-muted-foreground">মোয়াল্লেম বকেয়া</span><span className="font-bold text-yellow-600">{fmt(moallemDue)}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">কাস্টমার বকেয়া</span><span className="font-bold text-yellow-600">{fmt(customerDue)}</span></div>
+            <div className="flex justify-between cursor-pointer hover:bg-secondary/30 rounded px-1 -mx-1 py-0.5 transition-colors" onClick={() => navigate("/admin/moallems")}>
+              <span className="text-muted-foreground">মোয়াল্লেম বকেয়া</span><span className="font-bold text-yellow-600">{fmt(moallemDue)}</span>
+            </div>
+            <div className="flex justify-between cursor-pointer hover:bg-secondary/30 rounded px-1 -mx-1 py-0.5 transition-colors" onClick={() => setShowDueCustomers(true)}>
+              <span className="text-muted-foreground">কাস্টমার বকেয়া</span><span className="font-bold text-yellow-600">{fmt(customerDue)}</span>
+            </div>
             <div className="border-t border-border pt-2 flex justify-between font-bold"><span>মোট</span><span className="text-primary">{fmt(moallemDue + customerDue)}</span></div>
+          </div>
+        </div>
+        <div className="bg-card border border-border rounded-xl p-4">
+          <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+            <ArrowDownRight className="h-4 w-4 text-destructive" /> প্রদেয় (Payable)
+          </h3>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between cursor-pointer hover:bg-secondary/30 rounded px-1 -mx-1 py-0.5 transition-colors" onClick={() => navigate("/admin/supplier-agents")}>
+              <span className="text-muted-foreground">সাপ্লায়ার বকেয়া</span><span className="font-bold text-destructive">{fmt(supplierDue)}</span>
+            </div>
+            <div className="flex justify-between cursor-pointer hover:bg-secondary/30 rounded px-1 -mx-1 py-0.5 transition-colors" onClick={() => navigate("/admin/moallems")}>
+              <span className="text-muted-foreground">কমিশন বকেয়া</span><span className="font-bold text-destructive">{fmt(commissionDue)}</span>
+            </div>
+            <div className="border-t border-border pt-2 flex justify-between font-bold"><span>মোট</span><span className="text-destructive">{fmt(supplierDue + commissionDue)}</span></div>
           </div>
         </div>
         <div className="bg-card border border-border rounded-xl p-4">
@@ -170,7 +188,7 @@ const AdminDashboardCharts = ({
           {recentBookings.length > 0 ? (
             <div className="space-y-2">
               {recentBookings.map(b => (
-                <div key={b.id} className="flex items-center justify-between bg-secondary/30 rounded-lg p-3">
+                <div key={b.id} className="flex items-center justify-between bg-secondary/30 rounded-lg p-3 cursor-pointer hover:bg-secondary/50 transition-colors" onClick={() => navigate("/admin/bookings")}>
                   <div>
                     <p className="text-sm font-medium">{b.guest_name || "N/A"}</p>
                     <p className="text-[10px] text-muted-foreground">{b.tracking_id} · {b.packages?.name || ""}</p>
@@ -195,7 +213,7 @@ const AdminDashboardCharts = ({
           {recentPayments.length > 0 ? (
             <div className="space-y-2">
               {recentPayments.map(p => (
-                <div key={p.id} className="flex items-center justify-between bg-secondary/30 rounded-lg p-3">
+                <div key={p.id} className="flex items-center justify-between bg-secondary/30 rounded-lg p-3 cursor-pointer hover:bg-secondary/50 transition-colors" onClick={() => navigate("/admin/payments")}>
                   <div>
                     <p className="text-sm font-medium">{p.bookings?.tracking_id || p.booking_id?.slice(0, 8)}</p>
                     <p className="text-[10px] text-muted-foreground">#{p.installment_number || "—"} · {p.payment_method || "manual"}</p>
