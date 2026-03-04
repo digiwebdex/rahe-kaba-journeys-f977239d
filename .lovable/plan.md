@@ -2,80 +2,38 @@
 
 ## Analysis
 
-This application already has ~95% of the requested features built. Here is what exists and what's missing:
+The user wants to show **individual payment history with dates** for each booking — specifically when a customer paid and how much on each date, displayed separately (e.g., "19/02/2026 — ৳200,000" and "03/03/2026 — ৳300,000").
 
-### Already Implemented
-- All pages (Home, Packages, Hotels, Booking, Tracking, Dashboard, About, Contact)
-- Admin panel with sidebar (Dashboard, Bookings, Customers, Packages, Hotels, Payments, Accounting, Reports, CMS, Settings, Notifications)
-- Payment system with installments, auto-calculation, negative-due prevention
-- Document upload system (passport, NID, photo)
-- Hotel booking module with management
-- RBAC (admin, manager, staff, viewer)
-- CMS system with version history
-- Reports with PDF/Excel export
-- Notification system (email + SMS)
-- Order tracking by Tracking ID
-- Financial reports (customer-wise, package-wise)
-- Accounting (income, expenses, profit)
+The `BookingDetail` component (lines 23-136) already shows an "Installment History" table with columns: #, Amount, Method, Due Date, Paid Date, Status. This data comes from the `payments` table.
 
-### Gaps to Fix
+However, the issue is that payment dates (`paid_at`) may not be consistently populated, and the display is inside an expandable section that requires clicking "View Details."
 
-1. **Booking requires login** — Currently `Booking.tsx` redirects to `/auth` if no session (lines 51-54). The user explicitly wants booking WITHOUT login. This is the biggest change needed.
+## Plan
 
-2. **No phone number search on tracking page** — Currently only supports Tracking ID search. User wants phone number search too.
+### 1. Enhance payment history display in BookingDetail
 
-3. **No Testimonials section** on the home page — User requested it but it doesn't exist.
+- Add a **"Payment Timeline"** section in `BookingDetail` that shows only **completed** payments in a clean, date-focused format:
+  - Each entry: date (formatted as DD/MM/YYYY) + amount + payment method
+  - Sorted by `paid_at` ascending
+  - Visually distinct with a timeline/list style showing chronological payments
 
-4. **Passport is required during booking** (line 101-104) — User says passport should be optional.
+### 2. Add payment summary to booking card (main view)
 
----
+- On each booking card in the main list (lines 443-451), add a small **payment breakdown** below the existing financial grid
+- Show completed payments as compact chips/badges: `19/02/2026: ৳200,000` | `03/03/2026: ৳300,000`
+- This requires fetching payments alongside bookings
 
-## Implementation Plan
+### 3. Data fetching changes
 
-### 1. Enable guest booking (no login required)
-- Remove auth redirect from `Booking.tsx`
-- Allow guest users to fill in personal details and submit
-- For guests: insert a temporary profile or use a service-role edge function to create the booking
-- Create an edge function `create-guest-booking` that:
-  - Accepts booking details + personal info
-  - Creates/finds a guest profile entry
-  - Inserts the booking
-  - Returns the tracking ID
-- Add RLS policy or use service role for guest inserts
-- Keep optional login: if user is logged in, pre-fill from profile as before
-
-### 2. Add phone number search to tracking page
-- Add a toggle or auto-detect (phone vs tracking ID) in the search bar
-- Query bookings joined with profiles where `profiles.phone` matches
-- Show multiple results if phone has multiple bookings
-
-### 3. Add Testimonials section to home page
-- Create `TestimonialsSection.tsx` component with static testimonials (editable via CMS later)
-- Add it to `Index.tsx` between existing sections
-
-### 4. Make passport optional during booking
-- Remove the passport validation requirement in `validateStep()`
+- In `AdminBookingsPage`, fetch payments for all bookings in a single query and group by `booking_id`
+- Pass payment data to each booking card for inline display
+- No database changes needed — `payments` table already has `paid_at`, `amount`, `status`
 
 ### Technical Details
 
-**Guest Booking Edge Function** (`supabase/functions/create-guest-booking/index.ts`):
-- Accepts: `fullName`, `phone`, `address`, `passportNumber` (optional), `email` (optional), `packageId`, `numTravelers`, `notes`
-- Uses service role to bypass RLS
-- Creates profile if phone doesn't exist, or links to existing
-- Inserts booking with `status: 'pending'`, `paid_amount: 0`
-- Returns `tracking_id`
-
-**Database changes needed**:
-- Make `bookings.user_id` nullable OR use a system/guest user approach
-- Add phone-based lookup support
-
-**Files to create**:
-- `src/components/TestimonialsSection.tsx`
-- `supabase/functions/create-guest-booking/index.ts`
-
-**Files to modify**:
-- `src/pages/Booking.tsx` — Remove auth gate, add guest flow
-- `src/pages/TrackBooking.tsx` — Add phone number search
-- `src/pages/Index.tsx` — Add TestimonialsSection
-- `supabase/config.toml` — Add guest-booking function config
+**Files to modify:**
+- `src/pages/admin/AdminBookingsPage.tsx`
+  - Add `payments` state and fetch all completed payments grouped by booking_id
+  - Add compact payment date list on each booking card
+  - Enhance `BookingDetail` to show a clear "Payment Timeline" with dates
 
