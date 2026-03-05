@@ -488,6 +488,7 @@ export default function AdminPaymentsPage() {
                     <td className="py-3" onClick={(e) => e.stopPropagation()}>
                       {(p._type === "moallem" || p._type === "supplier") ? (
                         <AdminActionMenu inlineCount={1} actions={[
+                          { label: "PDF", icon: <FileDown className="h-3.5 w-3.5" />, onClick: () => exportPDF({ title: `Payment - ${p._displayName}`, columns: ["Type", "Tracking ID", "Name", "Amount", "Method", "Date"], rows: [[badge.label, p._trackingId, p._displayName, p._amount, p.payment_method || "—", p.date ? new Date(p.date).toLocaleDateString() : "—"]], summary: [`Total Amount: ৳${p._amount.toLocaleString()}`] }) },
                           { label: "Delete", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => { setDeleteId(p.id); setDeleteType(p._type); }, variant: "destructive", hidden: !canModify },
                         ]} />
                       ) : p.status === "pending" && markPaidId === p.id ? (
@@ -503,6 +504,7 @@ export default function AdminPaymentsPage() {
                         <AdminActionMenu
                           inlineCount={2}
                           actions={[
+                            { label: "PDF", icon: <FileDown className="h-3.5 w-3.5" />, onClick: () => exportPDF({ title: `Payment - ${p._displayName}`, columns: ["Type", "Tracking ID", "Name", "Amount", "Method", "Date", "Status"], rows: [[badge.label, p._trackingId, p._displayName, p._amount, p.payment_method || "—", p.paid_at ? new Date(p.paid_at).toLocaleDateString() : p.due_date ? new Date(p.due_date).toLocaleDateString() : "—", p.status]], summary: [`Total Amount: ৳${p._amount.toLocaleString()}`] }) },
                             { label: "Edit", icon: <Edit2 className="h-3.5 w-3.5" />, onClick: () => startEdit(p), variant: "warning", hidden: !canModify },
                             { label: "Delete", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => { setDeleteId(p.id); setDeleteType("customer"); }, variant: "destructive", hidden: !canModify, separator: true },
                             { label: "Approve", icon: <CheckCircle className="h-3.5 w-3.5" />, onClick: () => { setMarkPaidId(p.id); setMarkPaidWallet(""); }, variant: "success", hidden: !canModify || p.status !== "pending" },

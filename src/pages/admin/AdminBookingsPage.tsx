@@ -312,13 +312,14 @@ export default function AdminBookingsPage() {
 
   const getBookingActions = (b: any): ActionItem[] => [
     { label: "View Details", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => setViewBooking(b) },
+    { label: "PDF Report", icon: <FileDown className="h-3.5 w-3.5" />, onClick: () => exportPDF({ title: `Booking - ${b.tracking_id}`, columns: ["Tracking ID", "Guest", "Package", "Travelers", "Total", "Paid", "Due", "Status"], rows: [[b.tracking_id, b.guest_name || "—", b.packages?.name || "—", b.num_travelers || 1, Number(b.total_amount || 0), Number(b.paid_amount || 0), Number(b.due_amount || 0), b.status]], summary: [`Total Paid: ৳${Number(b.paid_amount || 0).toLocaleString()}`, `Total Due: ৳${Number(b.due_amount || 0).toLocaleString()}`] }) },
+    { label: "Download Invoice", icon: <Download className="h-3.5 w-3.5" />, onClick: () => handleDownloadInvoice(b), disabled: generatingId === b.id },
     { label: "Edit", icon: <Edit2 className="h-3.5 w-3.5" />, onClick: () => startEdit(b), variant: "warning", hidden: isViewer },
     { label: "Delete", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteId(b.id), variant: "destructive", hidden: isViewer, separator: true },
     { label: "Duplicate", icon: <Copy className="h-3.5 w-3.5" />, onClick: () => handleDuplicate(b), variant: "purple", hidden: isViewer },
     { label: "Add Payment", icon: <CreditCard className="h-3.5 w-3.5" />, onClick: () => navigate(`/admin/payments?action=add`), variant: "success", hidden: isViewer, separator: true },
     { label: "Add Expense", icon: <Receipt className="h-3.5 w-3.5" />, onClick: () => navigate(`/admin/accounting?action=add`), variant: "success", hidden: isViewer },
     { label: "Change Status", icon: <RefreshCw className="h-3.5 w-3.5" />, onClick: () => { setStatusChangeId(b.id); setStatusChangeVal(b.status); }, hidden: isViewer },
-    { label: "Download Invoice", icon: <Download className="h-3.5 w-3.5" />, onClick: () => handleDownloadInvoice(b), disabled: generatingId === b.id },
   ];
 
   return (
