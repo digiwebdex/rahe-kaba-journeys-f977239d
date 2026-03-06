@@ -423,7 +423,6 @@ function addPaymentHistoryTable(doc: jsPDF, y: number, payments: InvoicePayment[
       }
     },
     margin: { left: 14, right: 14 },
-    tableWidth: 110,
   });
 
   return ((doc as any).lastAutoTable?.finalY || y + 20) + 6;
@@ -576,12 +575,10 @@ async function generateIndividualInvoice(
 
   // Financial summary (right-aligned)
   const netTotal = Number(booking.total_amount);
-  const summaryY = y;
-  addFinancialSummary(doc, summaryY, grossAmount, discount, netTotal, Number(booking.paid_amount), Number(booking.due_amount || 0));
+  y = addFinancialSummary(doc, y, grossAmount, discount, netTotal, Number(booking.paid_amount), Number(booking.due_amount || 0));
 
-  // Payment history (left side, same Y)
-  y = addPaymentHistoryTable(doc, summaryY, payments);
-  y = Math.max(y, summaryY + 52);
+  // Payment history (below summary, full width)
+  y = addPaymentHistoryTable(doc, y, payments);
 
   // Signature
   y = addSignatureSection(doc, y, sig);
@@ -662,12 +659,10 @@ async function generateFamilyInvoice(
   y = ((doc as any).lastAutoTable?.finalY || y + 20) + 6;
 
   // Financial summary
-  const summaryY = y;
-  addFinancialSummary(doc, summaryY, totalGross, totalDiscount, totalFinal, Number(booking.paid_amount), Number(booking.due_amount || 0));
+  y = addFinancialSummary(doc, y, totalGross, totalDiscount, totalFinal, Number(booking.paid_amount), Number(booking.due_amount || 0));
 
-  // Payment history
-  y = addPaymentHistoryTable(doc, summaryY, payments);
-  y = Math.max(y, summaryY + 52);
+  // Payment history (below summary, full width)
+  y = addPaymentHistoryTable(doc, y, payments);
 
   // Signature
   y = addSignatureSection(doc, y, sig);
