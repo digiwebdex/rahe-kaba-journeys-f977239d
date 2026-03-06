@@ -431,14 +431,21 @@ function addPaymentHistoryTable(doc: jsPDF, y: number, payments: InvoicePayment[
 
 function addSignatureSection(doc: jsPDF, y: number, sig: SignatureData): number {
   const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
 
-  // Check page space
-  if (y > doc.internal.pageSize.getHeight() - 60) {
-    doc.addPage();
-    y = 20;
-  }
+  // Calculate how much space we need for signature (stamp + sig + line + text)
+  const sigBlockHeight = 50; // total height needed for signature block
+  const footerHeight = 20; // space for footer bar
 
-  y += 14;
+  // If not enough space, compress spacing but NEVER add a new page
+  const availableSpace = pageHeight - footerHeight - y;
+  const gap = Math.max(4, Math.min(14, availableSpace - sigBlockHeight));
+
+  y += gap;
+
+  // Ensure signature fits - clamp y so it stays on page
+  const maxY = pageHeight - footerHeight - 12;
+  if (y > maxY) y = maxY;
 
   // Left: Customer signature
   doc.setDrawColor(180);
@@ -452,10 +459,10 @@ function addSignatureSection(doc: jsPDF, y: number, sig: SignatureData): number 
   const rightCenter = pageWidth - 47;
 
   if (sig.stamp_base64) {
-    try { doc.addImage(sig.stamp_base64, "PNG", rightCenter - 18, y - 46, 36, 36); } catch { /* skip */ }
+    try { doc.addImage(sig.stamp_base64, "PNG", rightCenter - 14, y - 30, 28, 28); } catch { /* skip */ }
   }
   if (sig.signature_base64) {
-    try { doc.addImage(sig.signature_base64, "PNG", rightCenter - 14, y - 16, 28, 12); } catch { /* skip */ }
+    try { doc.addImage(sig.signature_base64, "PNG", rightCenter - 12, y - 12, 24, 10); } catch { /* skip */ }
   }
 
   doc.setDrawColor(180);
