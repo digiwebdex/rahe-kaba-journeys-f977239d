@@ -576,12 +576,10 @@ async function generateIndividualInvoice(
 
   // Financial summary (right-aligned)
   const netTotal = Number(booking.total_amount);
-  const summaryY = y;
-  addFinancialSummary(doc, summaryY, grossAmount, discount, netTotal, Number(booking.paid_amount), Number(booking.due_amount || 0));
+  y = addFinancialSummary(doc, y, grossAmount, discount, netTotal, Number(booking.paid_amount), Number(booking.due_amount || 0));
 
-  // Payment history (left side, same Y)
-  y = addPaymentHistoryTable(doc, summaryY, payments);
-  y = Math.max(y, summaryY + 52);
+  // Payment history (below summary, full width)
+  y = addPaymentHistoryTable(doc, y, payments);
 
   // Signature
   y = addSignatureSection(doc, y, sig);
