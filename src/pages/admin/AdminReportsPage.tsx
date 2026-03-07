@@ -459,6 +459,7 @@ export default function AdminReportsPage() {
   // ══════════════════════════════════════════════
   const tabItems = [
     { value: "financial", label: "Financial Summary", icon: BarChart3 },
+    { value: "daily", label: "Daily Booking", icon: ClipboardList },
     { value: "customer", label: "Customer Wise", icon: Users },
     { value: "package", label: "Package Wise", icon: Package },
     { value: "moallem", label: "Moallem Wise", icon: Briefcase },
