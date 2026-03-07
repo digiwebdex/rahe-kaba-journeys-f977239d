@@ -126,9 +126,7 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
+      const { error } = await api.resetPasswordForEmail(resetEmail.trim());
       if (error) throw error;
       toast.success(t("auth.resetLinkSent"));
     } catch (err: any) {
