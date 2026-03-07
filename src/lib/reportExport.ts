@@ -141,7 +141,7 @@ export async function exportPDF({ title, columns, rows, summary }: ReportData) {
 }
 
 export async function exportHajjiPDF({ title, customers }: HajjiReportData) {
-  const logoBase64 = await loadLogoBase64();
+  const [logoBase64, qrDataUrl] = await Promise.all([loadLogoBase64(), generateCompanyQr()]);
   const doc = new jsPDF({ orientation: "landscape" });
   const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -151,6 +151,8 @@ export async function exportHajjiPDF({ title, customers }: HajjiReportData) {
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 25);
+
+  addQrToReport(doc, qrDataUrl);
 
   let y = 30;
   const fmt = (n: number) => `BDT ${n.toLocaleString()}`;
