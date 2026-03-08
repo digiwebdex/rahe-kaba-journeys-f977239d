@@ -58,22 +58,51 @@ export default function AdminMoallemProfilePage() {
   const loadData = async () => {
     if (!id) return;
     setLoading(true);
-    const [mRes, bRes, mpRes, cpRes, accRes] = await Promise.all([
+    const [mRes, bRes, mpRes, cpRes, accRes, itemsRes] = await Promise.all([
       supabase.from("moallems").select("*").eq("id", id).maybeSingle(),
       supabase.from("bookings").select("*, packages(name, type, price)").eq("moallem_id", id).order("created_at", { ascending: false }),
       supabase.from("moallem_payments").select("*").eq("moallem_id", id).order("date", { ascending: false }),
       (supabase as any).from("moallem_commission_payments").select("*").eq("moallem_id", id).order("date", { ascending: false }),
       supabase.from("accounts").select("id, name, type, balance").order("name"),
+      (supabase as any).from("moallem_items").select("*").eq("moallem_id", id).order("created_at", { ascending: false }),
     ]);
     setMoallem(mRes.data);
     setBookings(bRes.data || []);
     setMoallemPayments(mpRes.data || []);
     setCommissionPayments(cpRes.data || []);
     setAccounts(accRes.data || []);
+    setMoallemItems(itemsRes.data || []);
     setLoading(false);
   };
 
   useEffect(() => { loadData(); }, [id]);
+
+  // Service Items CRUD
+  const handleAddItem = async () => {
+    const qty = parseFloat(itemForm.quantity) || 0;
+    const price = parseFloat(itemForm.unit_price) || 0;
+    if (!itemForm.description.trim()) { toast({ title: "বিবরণ দিন", variant: "destructive" }); return; }
+    if (qty <= 0 || price <= 0) { toast({ title: "সঠিক পরিমাণ ও মূল্য দিন", variant: "destructive" }); return; }
+    const { error } = await (supabase as any).from("moallem_items").insert({
+      moallem_id: id,
+      description: itemForm.description.trim(),
+      quantity: qty,
+      unit_price: price,
+      total_amount: qty * price,
+    });
+    if (error) { toast({ title: "ত্রুটি", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "আইটেম যোগ হয়েছে" });
+    setItemForm({ description: "", quantity: "1", unit_price: "0" });
+    setShowItemForm(false);
+    loadData();
+  };
+
+  const handleDeleteItem = async (itemId: string) => {
+    const { error } = await (supabase as any).from("moallem_items").delete().eq("id", itemId);
+    if (error) { toast({ title: "মুছতে ব্যর্থ", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "আইটেম মুছে ফেলা হয়েছে" });
+    loadData();
+  };
 
   const handleRecordPayment = async () => {
     const amount = parseFloat(paymentForm.amount);
