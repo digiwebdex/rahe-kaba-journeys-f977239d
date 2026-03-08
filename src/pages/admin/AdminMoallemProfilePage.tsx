@@ -487,6 +487,31 @@ export default function AdminMoallemProfilePage() {
 
       {renderPaymentDialog("মোয়াল্লেম পেমেন্ট রেকর্ড", showPaymentForm, setShowPaymentForm, paymentForm, setPaymentForm, handleRecordPayment)}
       {renderPaymentDialog("কমিশন পরিশোধ রেকর্ড", showCommissionForm, setShowCommissionForm, commissionForm, setCommissionForm, handleRecordCommission)}
+
+      {/* Add Service Item Dialog */}
+      <Dialog open={showItemForm} onOpenChange={setShowItemForm}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>সার্ভিস আইটেম যোগ করুন</DialogTitle><DialogDescription>মোয়াল্লেম কী কী সার্ভিস দিয়েছে তা লিখুন</DialogDescription></DialogHeader>
+          <div className="space-y-3">
+            <div><label className="text-xs text-muted-foreground block mb-1">বিবরণ *</label>
+              <Input value={itemForm.description} onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })} placeholder="যেমন: উমরাহ ভিসা, টিকেট..." /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="text-xs text-muted-foreground block mb-1">পরিমাণ</label>
+                <Input type="number" min={1} value={itemForm.quantity} onChange={(e) => setItemForm({ ...itemForm, quantity: e.target.value })} /></div>
+              <div><label className="text-xs text-muted-foreground block mb-1">একক মূল্য (৳)</label>
+                <Input type="number" min={0} value={itemForm.unit_price} onChange={(e) => setItemForm({ ...itemForm, unit_price: e.target.value })} /></div>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3 text-sm">
+              <span className="text-muted-foreground">মোট: </span>
+              <span className="font-bold">{fmt((parseFloat(itemForm.quantity) || 0) * (parseFloat(itemForm.unit_price) || 0))}</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowItemForm(false)}>বাতিল</Button>
+            <Button onClick={handleAddItem}>যোগ করুন</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
