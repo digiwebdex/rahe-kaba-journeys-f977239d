@@ -438,8 +438,7 @@ export async function generateCustomerPdf(data: CustomerPdfData, company: Compan
   doc.setFillColor(248, 248, 248);
   doc.rect(14, y, pw - 28, 24, "F");
   doc.setFontSize(10);
-  doc.setFont("NotoSansBengali", "normal");
-  doc.text(data.full_name || "N/A", 18, y + 6);
+  await addBengaliText(doc, data.full_name || "N/A", 18, y + 6, { fontSize: 10, fontWeight: "bold" });
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.text(`Phone: ${data.phone || "N/A"} | Email: ${data.email || "N/A"}`, 18, y + 12);
