@@ -25,6 +25,16 @@ interface ReportData {
   summary?: string[];
 }
 
+const buildSafeFileName = (title: string, ext: "pdf" | "xlsx") => {
+  const base = title
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_-]/g, "")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return `${base || "report"}.${ext}`;
+};
+
 export interface HajjiReportData {
   title: string;
   customers: {
