@@ -44,16 +44,58 @@ const createCrudRoutes = (tableName, options = {}) => {
       const params = [];
       const conditions = [];
 
+      const validColumn = (col) => /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(col);
       Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== '') {
-          params.push(value);
-          conditions.push(`${key} = $${params.length}`);
+        if (value === undefined || value === '') return;
+
+        const opMatch = key.match(/^(.*)_(neq|gt|gte|lt|lte|ilike|in|is|not_is)$/);
+        const column = opMatch ? opMatch[1] : key;
+        const operator = opMatch ? opMatch[2] : 'eq';
+        if (!validColumn(column)) return;
+
+        if (operator === 'is') {
+          if (String(value).toLowerCase() === 'null') conditions.push(`${column} IS NULL`);
+          else {
+            params.push(value);
+            conditions.push(`${column} = $${params.length}`);
+          }
+          return;
         }
+
+        if (operator === 'not_is') {
+          if (String(value).toLowerCase() === 'null') conditions.push(`${column} IS NOT NULL`);
+          else {
+            params.push(value);
+            conditions.push(`${column} <> $${params.length}`);
+          }
+          return;
+        }
+
+        if (operator === 'in') {
+          const arr = String(value).split(',').filter(Boolean);
+          if (!arr.length) return;
+          params.push(arr);
+          conditions.push(`${column} = ANY($${params.length})`);
+          return;
+        }
+
+        const sqlOp = {
+          eq: '=',
+          neq: '<>',
+          gt: '>',
+          gte: '>=',
+          lt: '<',
+          lte: '<=',
+          ilike: 'ILIKE',
+        }[operator] || '=';
+
+        params.push(operator === 'ilike' ? String(value).replace(/%/g, '') + '%' : value);
+        conditions.push(`${column} ${sqlOp} $${params.length}`);
       });
 
       if (conditions.length) sql += ' WHERE ' + conditions.join(' AND ');
       sql += ` ORDER BY ${orderBy} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-      params.push(limit, offset);
+      params.push(Number(limit) || 1000, Number(offset) || 0);
 
       const result = await query(sql, params);
       res.json(result.rows);
