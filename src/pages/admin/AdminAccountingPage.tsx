@@ -5,6 +5,7 @@ import { Plus, X, Edit2, Trash2, Save, Filter, TrendingUp, TrendingDown, BarChar
 import { exportPDF, exportExcel } from "@/lib/reportExport";
 import { useIsViewer, useCanModifyFinancials } from "@/components/admin/AdminLayout";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import DailyCashbook from "@/components/admin/DailyCashbook";
 
 const inputClass = "w-full bg-secondary border border-border rounded-md px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40";
 
