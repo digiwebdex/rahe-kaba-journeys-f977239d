@@ -257,7 +257,7 @@ export async function exportPDF({ title, columns, rows, summary }: ReportData) {
   }
 
   addCompanyFooter(doc, sig);
-  doc.save(`${title.replace(/\s+/g, "_")}.pdf`);
+  doc.save(buildSafeFileName(title, "pdf"));
 }
 
 // ═══════════════════════════════════════════════════════════════
