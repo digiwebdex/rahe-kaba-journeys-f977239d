@@ -149,6 +149,33 @@ export default function AdminSupplierAgentsPage() {
     return { totalContracted, totalPaid, totalDue };
   }, [filtered, supplierStats]);
 
+  // Agent name lookup
+  const agentNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    agents.forEach(a => { map[a.id] = a.agent_name; });
+    return map;
+  }, [agents]);
+
+  // Items with agent names
+  const itemsWithNames = useMemo(() => {
+    return allItems.map(item => ({
+      ...item,
+      agent_name: agentNameMap[item.supplier_agent_id] || "—",
+    }));
+  }, [allItems, agentNameMap]);
+
+  const itemsGrandTotal = useMemo(() => allItems.reduce((s: number, i: any) => s + Number(i.total_amount || 0), 0), [allItems]);
+
+  // Payments with agent names
+  const paymentsWithNames = useMemo(() => {
+    return allPaymentsDetailed.map(p => ({
+      ...p,
+      agent_name: agentNameMap[p.supplier_agent_id] || "—",
+    }));
+  }, [allPaymentsDetailed, agentNameMap]);
+
+  const paymentsGrandTotal = useMemo(() => allPaymentsDetailed.reduce((s: number, p: any) => s + Number(p.amount || 0), 0), [allPaymentsDetailed]);
+
   return (
     <div className="space-y-5">
       {/* Header */}
