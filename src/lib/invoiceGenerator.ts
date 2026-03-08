@@ -211,7 +211,7 @@ function addInvoiceTitleBlock(
   return y + Math.max(leftMeta.length, rightMeta.length) * 5 + 4;
 }
 
-function addCustomerSection(
+async function addCustomerSection(
   doc: jsPDF, y: number, customer: InvoiceCustomer, moallemName?: string | null, totalMembers?: number
 ): number {
   const pageWidth = doc.internal.pageSize.getWidth();
