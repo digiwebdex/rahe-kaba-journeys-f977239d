@@ -350,9 +350,9 @@ export async function generateSupplierPdf(data: SupplierPdfData, company: Compan
     y += 4;
     autoTable(doc, {
       startY: y,
-      head: [["Amount", "Date", "Method", "Notes"]],
-      body: data.agentPayments.map(p => [fmt(p.amount), fmtDate(p.date), p.method, p.notes || "—"]),
-      styles: { fontSize: 7, font: "NotoSansBengali" },
+      head: [["Category", "Amount", "Date", "Method", "Notes"]],
+      body: data.agentPayments.map(p => [p.category || "—", fmt(p.amount), fmtDate(p.date), p.method, p.notes || "—"]),
+      styles: { fontSize: 7, font: "helvetica" },
       headStyles: { fillColor: [60, 70, 85] },
       margin: { left: 14, right: 14 },
     });
