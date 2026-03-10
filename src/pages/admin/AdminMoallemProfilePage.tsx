@@ -530,9 +530,10 @@ export default function AdminMoallemProfilePage() {
                       <td className="py-2 pr-3 text-right font-bold">{fmt(Number(item.total_amount))}</td>
                       {!isViewer && (
                         <td className="py-2">
-                          <button onClick={() => handleDeleteItem(item.id)} className="text-destructive hover:text-destructive/80 p-1">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          <div className="flex gap-1">
+                            <button onClick={() => startEditItem(item)} className="text-primary hover:text-primary/80 p-1"><Pencil className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => handleDeleteItem(item.id)} className="text-destructive hover:text-destructive/80 p-1"><Trash2 className="h-3.5 w-3.5" /></button>
+                          </div>
                         </td>
                       )}
                     </tr>
