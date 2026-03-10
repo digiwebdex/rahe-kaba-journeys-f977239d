@@ -1037,6 +1037,39 @@ export default function AdminPaymentsPage() {
           </div>
         </div>
       )}
+
+      {/* Edit Moallem/Supplier Payment Modal */}
+      <Dialog open={showEditModal} onOpenChange={(o) => { if (!o) { setShowEditModal(false); setEditingId(null); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-heading">{editType === "moallem" ? "মোয়াল্লেম পেমেন্ট সম্পাদনা" : "সাপ্লায়ার পেমেন্ট সম্পাদনা"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">পরিমাণ (৳) *</label>
+              <input className={inputClass} type="number" min={1} value={editForm.amount || ""} onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">পদ্ধতি</label>
+              <select className={inputClass} value={editForm.payment_method || "cash"} onChange={(e) => setEditForm({ ...editForm, payment_method: e.target.value })}>
+                {PAYMENT_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">তারিখ</label>
+              <input className={inputClass} type="date" value={editForm.date || ""} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">নোট</label>
+              <textarea className={inputClass + " resize-none"} rows={2} value={editForm.notes || ""} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <button onClick={() => { setShowEditModal(false); setEditingId(null); }} className="text-sm px-4 py-2 rounded-md bg-secondary">বাতিল</button>
+            <button onClick={saveEdit} className="text-sm px-4 py-2 rounded-md bg-primary text-primary-foreground font-semibold flex items-center gap-2"><Save className="h-4 w-4" /> সেভ</button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
