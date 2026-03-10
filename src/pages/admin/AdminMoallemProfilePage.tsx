@@ -23,6 +23,22 @@ import { generateMoallemPdf, getCompanyInfoForPdf, MoallemPdfData } from "@/lib/
 
 const fmt = (n: number) => `৳${Number(n || 0).toLocaleString()}`;
 const PAYMENT_METHODS = ["cash", "bkash", "nagad", "bank", "other"];
+const SERVICE_TYPES = [
+  { value: "", label: "-- সার্ভিস নির্বাচন করুন --" },
+  { value: "visa", label: "ভিসা" },
+  { value: "ticket", label: "টিকেট" },
+  { value: "hajj", label: "হজ্জ" },
+  { value: "umrah", label: "উমরাহ" },
+  { value: "hotel", label: "হোটেল" },
+  { value: "transport", label: "পরিবহন" },
+  { value: "food", label: "খাবার" },
+  { value: "guide", label: "গাইড" },
+  { value: "ziyarah", label: "জিয়ারত" },
+  { value: "insurance", label: "বীমা" },
+  { value: "advance", label: "অগ্রিম" },
+  { value: "refund", label: "ফেরত" },
+  { value: "other", label: "অন্যান্য" },
+];
 
 export default function AdminMoallemProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -51,6 +67,7 @@ export default function AdminMoallemProfilePage() {
     amount: "", payment_method: "cash",
     date: new Date().toISOString().split("T")[0],
     notes: "", wallet_account_id: "", booking_id: "",
+    service_type: "",
   };
   const [paymentForm, setPaymentForm] = useState(emptyForm);
   const [commissionForm, setCommissionForm] = useState(emptyForm);
@@ -111,11 +128,13 @@ export default function AdminMoallemProfilePage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
+      const serviceLabel = SERVICE_TYPES.find(s => s.value === paymentForm.service_type)?.label || "";
+      const combinedNotes = [serviceLabel, paymentForm.notes.trim()].filter(Boolean).join(" — ");
       const { error } = await supabase.from("moallem_payments").insert({
         moallem_id: id, amount,
         payment_method: paymentForm.payment_method,
         date: paymentForm.date,
-        notes: paymentForm.notes.trim() || null,
+        notes: combinedNotes || null,
         wallet_account_id: paymentForm.wallet_account_id || null,
         booking_id: paymentForm.booking_id || null,
         recorded_by: session.user.id,
@@ -158,11 +177,13 @@ export default function AdminMoallemProfilePage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
+      const serviceLabel = SERVICE_TYPES.find(s => s.value === commissionForm.service_type)?.label || "";
+      const combinedNotes = [serviceLabel, commissionForm.notes.trim()].filter(Boolean).join(" — ");
       const { error } = await (supabase as any).from("moallem_commission_payments").insert({
         moallem_id: id, amount,
         payment_method: commissionForm.payment_method,
         date: commissionForm.date,
-        notes: commissionForm.notes.trim() || null,
+        notes: combinedNotes || null,
         wallet_account_id: commissionForm.wallet_account_id || null,
         booking_id: commissionForm.booking_id || null,
         recorded_by: session.user.id,
@@ -232,6 +253,11 @@ export default function AdminMoallemProfilePage() {
       <DialogContent>
         <DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription>পেমেন্ট তথ্য দিন</DialogDescription></DialogHeader>
         <div className="space-y-3">
+          <div><label className="text-xs text-muted-foreground block mb-1">সার্ভিস ধরন</label>
+            <Select value={formState.service_type || ""} onValueChange={(v) => setFormState({ ...formState, service_type: v })}>
+              <SelectTrigger><SelectValue placeholder="-- সার্ভিস নির্বাচন করুন --" /></SelectTrigger>
+              <SelectContent>{SERVICE_TYPES.filter(s => s.value).map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
+            </Select></div>
           <div><label className="text-xs text-muted-foreground block mb-1">পরিমাণ (৳) *</label>
             <Input type="number" min={0} value={formState.amount} onChange={(e) => setFormState({ ...formState, amount: e.target.value })} /></div>
           <div><label className="text-xs text-muted-foreground block mb-1">পদ্ধতি</label>
