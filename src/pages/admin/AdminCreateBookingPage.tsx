@@ -315,7 +315,7 @@ export default function AdminCreateBookingPage() {
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground block mb-1">Final Price</label>
-                  <div className={`${inputClass} bg-muted/30 font-bold`}>৳{Math.max(0, m.selling_price - m.discount).toLocaleString()}</div>
+                  <div className={`${inputClass} bg-muted/30 font-bold`}>BDT {Math.max(0, m.selling_price - m.discount).toLocaleString()}</div>
                 </div>
               </div>
             </div>
