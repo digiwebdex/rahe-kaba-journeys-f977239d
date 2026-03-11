@@ -220,7 +220,7 @@ export default function AdminAccountingPage() {
     try {
       if (tab === "cashbook") {
         if (!todayCashbookRows.length) {
-          toast.error("আজকের ক্যাশবুক ডেটা নেই");
+          toast.error("No cashbook data for today");
           return;
         }
         await exportPDF({
