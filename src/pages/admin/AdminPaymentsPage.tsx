@@ -41,7 +41,7 @@ const SERVICE_TYPES = [
   { value: "other", label: "Other" },
 ];
 
-// Extract service type from notes (format: "সার্ভিস লেবেল — actual notes")
+// Extract service type from notes (format: "Service Label — actual notes")
 const extractServiceType = (notes: string | null): { serviceValue: string; serviceLabel: string; cleanNotes: string } => {
   if (!notes) return { serviceValue: "", serviceLabel: "", cleanNotes: "" };
   for (const st of SERVICE_TYPES) {
