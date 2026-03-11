@@ -315,6 +315,7 @@ export async function exportHajjiPDF({ title, customers }: HajjiReportData) {
         alternateRowStyles: { fillColor: [250, 249, 247] },
         margin: { left: 18, right: 18 },
         theme: "grid",
+        didDrawCell: bengaliCellHook,
       });
       y = (doc as any).lastAutoTable?.finalY + 10 || y + 30;
     } else {
