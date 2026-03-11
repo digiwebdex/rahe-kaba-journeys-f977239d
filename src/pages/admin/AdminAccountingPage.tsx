@@ -670,7 +670,7 @@ export default function AdminAccountingPage() {
                   <div className="col-span-2"><span className="text-muted-foreground text-xs block">Customer</span><span className="font-medium">👤 {getCustomerLabel(viewExpense.customer_id)}</span></div>
                 )}
                 {viewExpense.package_id && (
-                  <div className="col-span-2"><span className="text-muted-foreground text-xs block">প্যাকেজ</span><span className="font-medium">📦 {getPackageLabel(viewExpense.package_id)}</span></div>
+                  <div className="col-span-2"><span className="text-muted-foreground text-xs block">Package</span><span className="font-medium">📦 {getPackageLabel(viewExpense.package_id)}</span></div>
                 )}
                 {viewExpense.wallet_account_id && (
                   <div className="col-span-2"><span className="text-muted-foreground text-xs block">ওয়ালেট</span><span className="font-medium">{walletAccounts.find(w => w.id === viewExpense.wallet_account_id)?.name || "—"}</span></div>
