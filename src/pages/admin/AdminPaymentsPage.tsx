@@ -35,6 +35,17 @@ const SERVICE_TYPES = [
   { value: "other", label: "অন্যান্য (Other)" },
 ];
 
+// Extract service type from notes (format: "সার্ভিস লেবেল — actual notes")
+const extractServiceType = (notes: string | null): { serviceValue: string; serviceLabel: string; cleanNotes: string } => {
+  if (!notes) return { serviceValue: "", serviceLabel: "", cleanNotes: "" };
+  for (const st of SERVICE_TYPES) {
+    if (!st.value) continue;
+    if (notes.startsWith(st.label + " — ")) return { serviceValue: st.value, serviceLabel: st.label, cleanNotes: notes.substring(st.label.length + 3) };
+    if (notes === st.label) return { serviceValue: st.value, serviceLabel: st.label, cleanNotes: "" };
+  }
+  return { serviceValue: "", serviceLabel: "", cleanNotes: notes };
+};
+
 export default function AdminPaymentsPage() {
   const isViewer = useIsViewer();
   const canModify = useCanModifyFinancials();
