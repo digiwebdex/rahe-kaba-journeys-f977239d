@@ -925,7 +925,7 @@ export default function AdminPaymentsPage() {
               </div>
             )}
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">রিসিট ফাইল (ঐচ্ছিক)</label>
+              <label className="text-xs text-muted-foreground block mb-1">Receipt File (Optional)</label>
               {receiptFile ? (
                 <div className="flex items-center gap-2 bg-secondary/50 rounded-lg p-2.5 border border-border">
                   <FileText className="h-4 w-4 text-primary flex-shrink-0" />
