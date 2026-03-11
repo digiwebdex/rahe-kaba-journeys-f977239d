@@ -664,7 +664,7 @@ export default function AdminAccountingPage() {
                 <div><span className="text-muted-foreground text-xs block">Type</span><span className="font-medium capitalize">{EXPENSE_TYPES.find(t => t.value === viewExpense.expense_type)?.label || viewExpense.expense_type}</span></div>
                 <div><span className="text-muted-foreground text-xs block">Assignment</span><span className="font-medium capitalize">{ASSIGN_TO.find(a => a.value === viewExpense.category)?.label || viewExpense.category || "General"}</span></div>
                 {viewExpense.booking_id && (
-                  <div className="col-span-2"><span className="text-muted-foreground text-xs block">বুকিং</span><span className="font-medium">📋 {getBookingLabel(viewExpense.booking_id)}</span></div>
+                  <div className="col-span-2"><span className="text-muted-foreground text-xs block">Booking</span><span className="font-medium">📋 {getBookingLabel(viewExpense.booking_id)}</span></div>
                 )}
                 {viewExpense.customer_id && (
                   <div className="col-span-2"><span className="text-muted-foreground text-xs block">কাস্টমার</span><span className="font-medium">👤 {getCustomerLabel(viewExpense.customer_id)}</span></div>
