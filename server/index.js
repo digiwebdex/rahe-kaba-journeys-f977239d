@@ -149,7 +149,29 @@ const createCrudRoutes = (tableName, options = {}) => {
     }
   });
 
-  // Delete
+  // Bulk delete by filter (e.g. DELETE /api/payments?booking_id=xxx)
+  router.delete('/', writeAuth ? authenticate : optionalAuth, adminOnly ? requireRole('admin') : (req, res, next) => next(), async (req, res) => {
+    try {
+      const filters = req.query;
+      const keys = Object.keys(filters);
+      if (!keys.length) return res.status(400).json({ error: 'Filter required for bulk delete' });
+      const validColumn = (col) => /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(col);
+      const conditions = [];
+      const params = [];
+      keys.forEach((col) => {
+        if (!validColumn(col)) return;
+        params.push(filters[col]);
+        conditions.push(`${col} = $${params.length}`);
+      });
+      if (!conditions.length) return res.status(400).json({ error: 'Valid filter required' });
+      const result = await query(`DELETE FROM ${tableName} WHERE ${conditions.join(' AND ')} RETURNING id`, params);
+      res.json({ message: 'Deleted', count: result.rowCount });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Delete by ID
   router.delete('/:id', writeAuth ? authenticate : optionalAuth, adminOnly ? requireRole('admin') : (req, res, next) => next(), async (req, res) => {
     try {
       const result = await query(`DELETE FROM ${tableName} WHERE id = $1 RETURNING id`, [req.params.id]);
