@@ -1084,7 +1084,7 @@ export default function AdminPaymentsPage() {
               <input className={inputClass} type="number" min={1} value={editForm.amount || ""} onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })} />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">পদ্ধতি</label>
+              <label className="text-xs text-muted-foreground block mb-1">Method</label>
               <select className={inputClass} value={editForm.payment_method || "cash"} onChange={(e) => setEditForm({ ...editForm, payment_method: e.target.value })}>
                 {PAYMENT_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
               </select>
