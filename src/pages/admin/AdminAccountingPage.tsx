@@ -355,7 +355,7 @@ export default function AdminAccountingPage() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-sm text-muted-foreground">মোট আয়</p>
+          <p className="text-sm text-muted-foreground">Total Income</p>
           <p className="text-2xl font-heading font-bold text-primary">{fmt(revenue)}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
