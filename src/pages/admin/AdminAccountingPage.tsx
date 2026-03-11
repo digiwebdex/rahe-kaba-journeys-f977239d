@@ -677,7 +677,7 @@ export default function AdminAccountingPage() {
                 )}
               </div>
               {viewExpense.note && (
-                <div><span className="text-muted-foreground text-xs block">নোট</span><p>{viewExpense.note}</p></div>
+                <div><span className="text-muted-foreground text-xs block">Notes</span><p>{viewExpense.note}</p></div>
               )}
             </div>
           )}
