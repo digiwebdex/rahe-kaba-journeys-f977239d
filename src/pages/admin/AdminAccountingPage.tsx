@@ -343,7 +343,7 @@ export default function AdminAccountingPage() {
       {/* Daily Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <div className="bg-card border border-emerald/30 rounded-lg p-4">
-          <p className="text-sm text-muted-foreground">আজকের আয় ({today})</p>
+          <p className="text-sm text-muted-foreground">Today's Income ({today})</p>
           <p className="text-2xl font-heading font-bold text-emerald">{fmt(dailyIncome)}</p>
         </div>
         <div className="bg-card border border-destructive/30 rounded-lg p-4">
