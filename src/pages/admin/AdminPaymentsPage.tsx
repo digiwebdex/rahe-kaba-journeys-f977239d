@@ -985,9 +985,9 @@ export default function AdminPaymentsPage() {
                 <div><span className="text-muted-foreground text-xs block">Method</span><span className="font-medium capitalize">{viewPayment.payment_method || "—"}</span></div>
                 {viewPayment._type === "customer" && (
                   <>
-                    <div><span className="text-muted-foreground text-xs block">কিস্তি নং</span><span className="font-medium">{viewPayment.installment_number || "—"}</span></div>
+                    <div><span className="text-muted-foreground text-xs block">Installment No.</span><span className="font-medium">{viewPayment.installment_number || "—"}</span></div>
                     <div>
-                      <span className="text-muted-foreground text-xs block">স্ট্যাটাস</span>
+                      <span className="text-muted-foreground text-xs block">Status</span>
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${viewPayment.status === "completed" ? "text-emerald bg-emerald/10" : viewPayment.status === "pending" ? "text-primary bg-primary/10" : "text-destructive bg-destructive/10"}`}>
                         {viewPayment.status}
                       </span>
