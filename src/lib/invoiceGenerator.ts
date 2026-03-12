@@ -109,6 +109,30 @@ async function fetchMoallemName(moallemId: string): Promise<string> {
 
 const normalizeBookingType = (value?: string | null) => (value || "").trim().toLowerCase();
 
+function normalizeMembers(members: Partial<BookingMember>[], fallbackPackageName: string): BookingMember[] {
+  return (members || []).map((member, index) => {
+    const rawPackage = (member as any)?.packages;
+    const packageName = Array.isArray(rawPackage)
+      ? rawPackage[0]?.name
+      : rawPackage?.name;
+
+    const selling = Math.max(0, Number(member.selling_price || 0));
+    const discount = Math.min(Math.max(0, Number(member.discount || 0)), selling);
+    const fallbackFinal = Math.max(0, selling - discount);
+    const finalPrice = Math.max(0, Number(member.final_price ?? fallbackFinal));
+
+    return {
+      full_name: (member.full_name || `Traveler ${index + 1}`).trim(),
+      passport_number: member.passport_number?.trim() || null,
+      package_id: member.package_id || null,
+      packages: { name: packageName || fallbackPackageName || "N/A" },
+      selling_price: selling,
+      discount,
+      final_price: finalPrice,
+    };
+  });
+}
+
 function buildFallbackMembers(booking: InvoiceBooking, customer: InvoiceCustomer): BookingMember[] {
   const travelerCount = Math.max(Number(booking.num_travelers || 0), 0);
   if (travelerCount <= 1) return [];
