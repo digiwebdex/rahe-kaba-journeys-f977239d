@@ -745,7 +745,7 @@ export default function AdminBookingsPage() {
           </DialogHeader>
           {viewBooking && (
             <div className="space-y-4">
-              {viewBooking.booking_type === "family" && <Badge variant="outline" className="text-xs">Family Booking</Badge>}
+              {isFamilyBooking(viewBooking.booking_type) && <Badge variant="outline" className="text-xs">Family Booking</Badge>}
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div><span className="text-muted-foreground text-xs block">Customer</span><span className="font-medium">{viewBooking.guest_name || "—"}</span></div>
                 <div><span className="text-muted-foreground text-xs block">Phone</span><span className="font-medium">{viewBooking.guest_phone || "—"}</span></div>
