@@ -133,6 +133,17 @@ const cleanText = (...values: unknown[]): string => {
   return "";
 };
 
+const toPackageShortLabel = (value: string): string => {
+  const label = cleanText(value, "N/A");
+  if (label === "N/A" || label.length <= 18) return label;
+
+  const words = label.split(/\s+/).filter(Boolean);
+  const acronym = words.map((word) => word[0]?.toUpperCase()).join("");
+  if (acronym.length >= 2 && acronym.length <= 10) return acronym;
+
+  return `${label.slice(0, 17)}…`;
+};
+
 async function fetchPackageNameMap(packageIds: string[]): Promise<Record<string, string>> {
   const uniqueIds = Array.from(new Set(packageIds.filter(Boolean)));
   if (uniqueIds.length === 0) return {};
