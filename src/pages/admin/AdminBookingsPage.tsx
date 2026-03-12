@@ -466,7 +466,7 @@ export default function AdminBookingsPage() {
                 <p className="font-mono font-bold text-primary text-sm">{b.tracking_id}</p>
                 <div className="flex gap-2">
                   <button onClick={saveEdit} className="text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-md flex items-center gap-1"><Save className="h-3 w-3" /> Save</button>
-                  <button onClick={() => setEditingId(null)} className="text-xs bg-secondary text-foreground px-3 py-1.5 rounded-md flex items-center gap-1"><X className="h-3 w-3" /> Cancel</button>
+                  <button onClick={() => { setEditingId(null); setEditMembers([]); }} className="text-xs bg-secondary text-foreground px-3 py-1.5 rounded-md flex items-center gap-1"><X className="h-3 w-3" /> Cancel</button>
                 </div>
               </div>
 
