@@ -132,13 +132,21 @@ export default function AdminCreateBookingPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { toast.error("Not authenticated"); return; }
 
+      // For family bookings, store all member names/passports as comma-separated backup
+      const guestName = bookingType === "family" && members.length > 0
+        ? members.map(m => m.full_name.trim()).filter(Boolean).join(", ") || form.guest_name.trim()
+        : form.guest_name.trim();
+      const guestPassport = bookingType === "family" && members.length > 0
+        ? members.map(m => m.passport_number.trim()).filter(Boolean).join(", ") || form.guest_passport.trim() || null
+        : form.guest_passport.trim() || null;
+
       const { data: booking, error } = await supabase.from("bookings").insert({
         booking_type: bookingType,
-        guest_name: form.guest_name.trim(),
+        guest_name: guestName,
         guest_phone: form.guest_phone.trim(),
         guest_email: form.guest_email.trim() || null,
         guest_address: form.guest_address.trim() || null,
-        guest_passport: form.guest_passport.trim() || null,
+        guest_passport: guestPassport,
         package_id: bookingType === "individual" ? form.package_id : (members[0]?.package_id || form.package_id || packages[0]?.id),
         num_travelers: numTravelers,
         selling_price_per_person: bookingType === "individual" ? form.selling_price_per_person : 0,
