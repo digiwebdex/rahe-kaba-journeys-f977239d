@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import {
   TrendingUp, DollarSign, Package,
   Users, Wallet, ArrowUpRight, ArrowDownRight, UserCheck,
+  CalendarDays, CreditCard,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { useCanSeeProfit } from "@/components/admin/AdminLayout";
+import { format } from "date-fns";
 
 interface Props {
   bookings: any[];
@@ -50,14 +52,6 @@ const AdminDashboardCharts = ({
       .filter(e => e.type === "income")
       .reduce((s, e) => s + Number(e.amount || 0), 0);
     const totalIncomeReceived = customerPaymentsIn + moallemDepositsIn + cashbookIncome;
-
-    const directExpenses = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
-    const supplierPaymentsOut = supplierPayments.reduce((s, p) => s + Number(p.amount || 0), 0);
-    const commissionPaymentsOut = commissionPayments.reduce((s, p) => s + Number(p.amount || 0), 0);
-    const contractPaymentsOut = supplierContractPayments.reduce((s, p) => s + Number(p.amount || 0), 0);
-    const cashbookExpense = dailyCashbook
-      .filter(e => e.type === "expense")
-      .reduce((s, e) => s + Number(e.amount || 0), 0);
 
     const bookingProfit = bookings.reduce((s, b) => {
       const selling = Number(b.total_amount || 0);
@@ -108,19 +102,22 @@ const AdminDashboardCharts = ({
   const kpiCards = useMemo(() => {
     const cards: { label: string; value: string | number; icon: any; color: string; onClick: () => void }[] = [
       { label: "Total Sales", value: fmt(financials.totalSales), icon: DollarSign, color: "text-primary", onClick: () => navigate("/admin/bookings") },
-      { label: "Income Received", value: fmt(financials.totalIncomeReceived), icon: ArrowUpRight, color: "text-emerald", onClick: () => navigate("/admin/payments") },
+      { label: "Income Received", value: fmt(financials.totalIncomeReceived), icon: ArrowUpRight, color: "text-emerald-500", onClick: () => navigate("/admin/payments") },
     ];
     if (canSeeProfit) {
-      cards.push({ label: "Net Profit", value: fmt(financials.netProfit), icon: TrendingUp, color: financials.netProfit >= 0 ? "text-emerald" : "text-destructive", onClick: () => navigate("/admin/accounting") });
+      cards.push({ label: "Net Profit", value: fmt(financials.netProfit), icon: TrendingUp, color: financials.netProfit >= 0 ? "text-emerald-500" : "text-destructive", onClick: () => navigate("/admin/accounting") });
     }
     cards.push(
       { label: "Cash Balance", value: fmt(financials.cashBalance), icon: Wallet, color: financials.cashBalance >= 0 ? "text-primary" : "text-destructive", onClick: () => navigate("/admin/accounting") },
       { label: "Total Bookings", value: bookings.length, icon: Package, color: "text-foreground", onClick: () => navigate("/admin/bookings") },
       { label: "Total Hajji", value: financials.totalHajji, icon: Users, color: "text-foreground", onClick: () => navigate("/admin/customers") },
-      { label: "Customer Due", value: fmt(financials.customerDue), icon: UserCheck, color: financials.customerDue > 0 ? "text-yellow-500" : "text-emerald", onClick: () => setShowDueCustomers(true) },
+      { label: "Customer Due", value: fmt(financials.customerDue), icon: UserCheck, color: financials.customerDue > 0 ? "text-yellow-500" : "text-emerald-500", onClick: () => setShowDueCustomers(true) },
     );
     return cards;
   }, [financials, bookings.length, canSeeProfit, navigate]);
+
+  const recentBookings = bookings.slice(0, 5);
+  const recentPayments = payments.filter(p => p.status === "completed").slice(0, 5);
 
   return (
     <div className="space-y-5">
@@ -175,6 +172,77 @@ const AdminDashboardCharts = ({
               <span className="text-destructive">{fmt(financials.supplierDue + (canSeeProfit ? financials.commissionDue : 0))}</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ═══ RECENT BOOKINGS & PAYMENTS ═══ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Recent Bookings */}
+        <div className="bg-card border border-border rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-primary" /> Recent Bookings
+            </h3>
+            <span className="text-xs text-primary cursor-pointer hover:underline" onClick={() => navigate("/admin/bookings")}>View All</span>
+          </div>
+          {recentBookings.length > 0 ? (
+            <div className="space-y-2">
+              {recentBookings.map(b => (
+                <div
+                  key={b.id}
+                  className="flex items-center justify-between py-2 border-b border-border last:border-0 cursor-pointer hover:bg-secondary/20 rounded px-1 -mx-1 transition-colors"
+                  onClick={() => navigate("/admin/bookings")}
+                >
+                  <div>
+                    <p className="text-sm font-semibold">{b.guest_name || "N/A"}</p>
+                    <p className="text-[11px] text-muted-foreground">{b.tracking_id} · {b.packages?.name || ""}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-primary">{fmt(Number(b.total_amount || 0))}</p>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                      b.status === "confirmed" ? "bg-emerald-500/10 text-emerald-500" :
+                      b.status === "cancelled" ? "bg-destructive/10 text-destructive" :
+                      "bg-yellow-500/10 text-yellow-600"
+                    }`}>{b.status}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-4">No bookings yet</p>
+          )}
+        </div>
+
+        {/* Recent Payments */}
+        <div className="bg-card border border-border rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-emerald-500" /> Recent Payments
+            </h3>
+            <span className="text-xs text-primary cursor-pointer hover:underline" onClick={() => navigate("/admin/payments")}>View All</span>
+          </div>
+          {recentPayments.length > 0 ? (
+            <div className="space-y-2">
+              {recentPayments.map(p => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between py-2 border-b border-border last:border-0 cursor-pointer hover:bg-secondary/20 rounded px-1 -mx-1 transition-colors"
+                  onClick={() => navigate("/admin/payments")}
+                >
+                  <div>
+                    <p className="text-sm font-semibold">{p.bookings?.tracking_id || p.id.slice(0, 8)}</p>
+                    <p className="text-[11px] text-muted-foreground">#{p.installment_number || 1} · {p.payment_method || "cash"}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-emerald-500">{fmt(Number(p.amount || 0))}</p>
+                    <p className="text-[10px] text-muted-foreground">{p.paid_at ? format(new Date(p.paid_at), "dd MMM yy") : ""}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-4">No payments yet</p>
+          )}
         </div>
       </div>
 
