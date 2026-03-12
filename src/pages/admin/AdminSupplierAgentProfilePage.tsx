@@ -226,7 +226,7 @@ export default function AdminSupplierAgentProfilePage() {
         paid_to_supplier: Number(b.paid_to_supplier || 0),
         supplier_due: Number(b.supplier_due || 0), status: b.status,
       })),
-      agentPayments: filteredPayments.map(p => {
+      agentPayments: filteredPayments.map((p: any) => {
         const parsed = splitPaymentNotes(p.notes);
         return {
           amount: Number(p.amount),
@@ -235,7 +235,7 @@ export default function AdminSupplierAgentProfilePage() {
           notes: parsed.notes,
           category: parsed.service,
         };
-      contracts: contracts.map((c: any) => ({
+      }),
         contract_amount: Number(c.contract_amount || 0),
         pilgrim_count: Number(c.pilgrim_count || 0),
         total_paid: Number(c.total_paid || 0),
