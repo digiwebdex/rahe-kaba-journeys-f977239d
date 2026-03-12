@@ -660,62 +660,52 @@ function addPaymentHistoryTable(doc: jsPDF, y: number, payments: InvoicePayment[
 
 function addSignatureSection(doc: jsPDF, y: number, sig: SignatureData): number {
   const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
 
-  // Calculate how much space we need for signature (stamp + sig + line + text)
-  const sigBlockHeight = 50; // total height needed for signature block
-  const footerHeight = 20; // space for footer bar
-
-  // If not enough space, compress spacing but NEVER add a new page
-  const availableSpace = pageHeight - footerHeight - y;
-  const gap = Math.max(4, Math.min(14, availableSpace - sigBlockHeight));
-
-  y += gap;
-
-  // Ensure signature fits - clamp y so it stays on page
-  const maxY = pageHeight - footerHeight - 12;
-  if (y > maxY) y = maxY;
+  // Keep clear spacing from previous section and move to next page when needed.
+  let lineY = y + 8;
+  lineY = ensurePageSpace(doc, lineY, 16, 44);
+  if (lineY < 44) lineY = 44; // reserve top area for stamp/sign image
 
   // Left: Customer signature
   doc.setDrawColor(180);
-  doc.line(14, y, 80, y);
+  doc.line(14, lineY, 80, lineY);
   doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(100);
-  doc.text("Customer Signature", 14, y + 5);
+  doc.text("Customer Signature", 14, lineY + 5);
 
   // Right: Authorized signature
   const rightCenter = pageWidth - 47;
 
   if (sig.stamp_base64) {
-    try { doc.addImage(sig.stamp_base64, "PNG", rightCenter - 14, y - 30, 28, 28); } catch { /* skip */ }
+    try { doc.addImage(sig.stamp_base64, "PNG", rightCenter - 14, lineY - 30, 28, 28); } catch { /* skip */ }
   }
   if (sig.signature_base64) {
-    try { doc.addImage(sig.signature_base64, "PNG", rightCenter - 12, y - 12, 24, 10); } catch { /* skip */ }
+    try { doc.addImage(sig.signature_base64, "PNG", rightCenter - 12, lineY - 12, 24, 10); } catch { /* skip */ }
   }
 
   doc.setDrawColor(180);
-  doc.line(pageWidth - 80, y, pageWidth - 14, y);
+  doc.line(pageWidth - 80, lineY, pageWidth - 14, lineY);
 
   if (sig.authorized_name) {
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(DARK.r, DARK.g, DARK.b);
-    doc.text(sig.authorized_name, rightCenter, y + 5, { align: "center" });
+    doc.text(sig.authorized_name, rightCenter, lineY + 5, { align: "center" });
   } else {
     doc.setFontSize(7);
-    doc.text("Authorized Signature", pageWidth - 80, y + 5);
+    doc.text("Authorized Signature", pageWidth - 80, lineY + 5);
   }
 
   if (sig.designation) {
     doc.setFontSize(6.5);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(100);
-    doc.text(sig.designation, rightCenter, y + 10, { align: "center" });
+    doc.text(sig.designation, rightCenter, lineY + 10, { align: "center" });
   }
 
   doc.setTextColor(0);
-  return y + 14;
+  return lineY + 14;
 }
 
 function addFooter(doc: jsPDF) {
