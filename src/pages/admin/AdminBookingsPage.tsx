@@ -381,6 +381,14 @@ export default function AdminBookingsPage() {
       }
     }
 
+    // For family bookings, store concatenated member names as backup in guest_name/guest_passport
+    const guestName = (isFamily && preparedMembers.length > 0)
+      ? preparedMembers.map((m: any) => m.full_name).filter(Boolean).join(", ") || editForm.guest_name?.trim() || null
+      : editForm.guest_name?.trim() || null;
+    const guestPassport = (isFamily && preparedMembers.length > 0)
+      ? preparedMembers.map((m: any) => m.passport_number).filter(Boolean).join(", ") || editForm.guest_passport?.trim() || null
+      : editForm.guest_passport?.trim() || null;
+
     const { error } = await supabase.from("bookings").update({
       status: editForm.status,
       booking_type: isFamily ? "family" : "individual",
@@ -395,9 +403,9 @@ export default function AdminBookingsPage() {
       commission_per_person: commPP,
       total_commission: totalCommVal,
       notes: editForm.notes || null, num_travelers: travelers,
-      guest_name: editForm.guest_name?.trim() || null, guest_phone: editForm.guest_phone?.trim() || null,
+      guest_name: guestName, guest_phone: editForm.guest_phone?.trim() || null,
       guest_email: editForm.guest_email?.trim() || null, guest_address: editForm.guest_address?.trim() || null,
-      guest_passport: editForm.guest_passport?.trim() || null, user_id: editForm.user_id || null,
+      guest_passport: guestPassport, user_id: editForm.user_id || null,
       moallem_id: editForm.moallem_id || null,
     }).eq("id", editingId);
     if (error) { toast.error(error.message); return; }
