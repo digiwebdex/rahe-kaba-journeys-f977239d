@@ -833,7 +833,7 @@ async function generateFamilyInvoice(
     head: [["SL", "Name", "Passport", "Package", "Price (BDT)", "Discount (BDT)", "Final (BDT)"]],
     body: [
       ...members.map((m, i) => {
-        const name = cleanText(m.full_name, i === 0 ? customer.full_name : "", `Traveler ${i + 1}`);
+        const name = cleanText(m.full_name, i === 0 ? customer.full_name : "", "—");
         const passport = cleanText(m.passport_number, i === 0 ? customer.passport_number : "", "—");
         const pkg = toPackageShortLabel(cleanText(m.packages?.name, booking.packages?.name, "N/A"));
 
