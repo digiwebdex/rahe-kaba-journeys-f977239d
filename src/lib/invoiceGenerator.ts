@@ -746,15 +746,12 @@ export async function generateInvoice(
     moallemName = await fetchMoallemName(booking.moallem_id);
   }
 
-  const isFamily = booking.booking_type === "family";
+  const normalizedType = (booking.booking_type || "").toLowerCase();
+  const members = booking.id ? await fetchBookingMembers(booking.id) : [];
+  const shouldRenderFamily = normalizedType === "family" || members.length > 0;
 
-  if (isFamily && booking.id) {
-    const members = await fetchBookingMembers(booking.id);
-    if (members.length > 0) {
-      await generateFamilyInvoice(doc, booking, customer, payments, members, logoBase64, sig, qrDataUrl, moallemName);
-    } else {
-      await generateIndividualInvoice(doc, booking, customer, payments, logoBase64, sig, qrDataUrl, moallemName);
-    }
+  if (shouldRenderFamily && members.length > 0) {
+    await generateFamilyInvoice(doc, booking, customer, payments, members, logoBase64, sig, qrDataUrl, moallemName);
   } else {
     await generateIndividualInvoice(doc, booking, customer, payments, logoBase64, sig, qrDataUrl, moallemName);
   }
