@@ -109,23 +109,66 @@ async function fetchMoallemName(moallemId: string): Promise<string> {
 
 const normalizeBookingType = (value?: string | null) => (value || "").trim().toLowerCase();
 
+const cleanText = (...values: unknown[]): string => {
+  for (const value of values) {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed) return trimmed;
+      continue;
+    }
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return String(value);
+    }
+  }
+
+  return "";
+};
+
+async function fetchPackageNameMap(packageIds: string[]): Promise<Record<string, string>> {
+  const uniqueIds = Array.from(new Set(packageIds.filter(Boolean)));
+  if (uniqueIds.length === 0) return {};
+
+  const { data, error } = await supabase
+    .from("packages")
+    .select("id, name")
+    .in("id", uniqueIds);
+
+  if (error) {
+    console.error("fetchPackageNameMap error:", error);
+    return {};
+  }
+
+  return (data || []).reduce((acc: Record<string, string>, row: any) => {
+    const id = cleanText(row?.id);
+    const name = cleanText(row?.name);
+    if (id && name) acc[id] = name;
+    return acc;
+  }, {} as Record<string, string>);
+}
+
 function normalizeMembers(members: Partial<BookingMember>[], fallbackPackageName: string): BookingMember[] {
   return (members || []).map((member, index) => {
-    const rawPackage = (member as any)?.packages;
-    const packageName = Array.isArray(rawPackage)
-      ? rawPackage[0]?.name
-      : rawPackage?.name;
+    const memberAny = member as any;
+    const rawPackage = memberAny?.packages;
+    const packageName = cleanText(
+      Array.isArray(rawPackage) ? rawPackage[0]?.name : rawPackage?.name,
+      memberAny?.package_name,
+      memberAny?.packageName,
+      fallbackPackageName,
+      "N/A"
+    );
 
-    const selling = Math.max(0, Number(member.selling_price || 0));
-    const discount = Math.min(Math.max(0, Number(member.discount || 0)), selling);
+    const selling = Math.max(0, Number(memberAny?.selling_price ?? memberAny?.price ?? 0));
+    const discount = Math.min(Math.max(0, Number(memberAny?.discount ?? 0)), selling);
     const fallbackFinal = Math.max(0, selling - discount);
-    const finalPrice = Math.max(0, Number(member.final_price ?? fallbackFinal));
+    const finalPrice = Math.max(0, Number(memberAny?.final_price ?? memberAny?.finalPrice ?? fallbackFinal));
 
     return {
-      full_name: (member.full_name || `Traveler ${index + 1}`).trim(),
-      passport_number: member.passport_number?.trim() || null,
-      package_id: member.package_id || null,
-      packages: { name: packageName || fallbackPackageName || "N/A" },
+      full_name: cleanText(memberAny?.full_name, memberAny?.fullName, memberAny?.name, `Traveler ${index + 1}`),
+      passport_number: cleanText(memberAny?.passport_number, memberAny?.passportNumber, memberAny?.passport) || null,
+      package_id: cleanText(memberAny?.package_id, memberAny?.packageId) || null,
+      packages: { name: packageName },
       selling_price: selling,
       discount,
       final_price: finalPrice,
@@ -788,7 +831,7 @@ export async function generateInvoice(
     moallemName = await fetchMoallemName(booking.moallem_id);
   }
 
-  const fallbackPackageName = booking.packages?.name || "N/A";
+  const fallbackPackageName = cleanText(booking.packages?.name, "N/A");
   const providedMembers = normalizeMembers(options.members || [], fallbackPackageName);
   const dbMembers = providedMembers.length === 0 && booking.id
     ? await fetchBookingMembers(booking.id, fallbackPackageName)
@@ -813,11 +856,46 @@ export async function generateInvoice(
     || providedMembers.length > 0
     || dbMembers.length > 0;
 
-  const invoiceMembers = providedMembers.length > 0
+  const rawInvoiceMembers = providedMembers.length > 0
     ? providedMembers
     : dbMembers.length > 0
       ? dbMembers
       : (hasFamilySignal ? buildFallbackMembers(normalizedBooking, customer) : []);
+
+  const missingPackageIds = rawInvoiceMembers
+    .filter((m) => !cleanText(m.packages?.name) && Boolean(m.package_id))
+    .map((m) => m.package_id as string);
+  const packageNameMap = await fetchPackageNameMap(missingPackageIds);
+
+  const customerName = cleanText(customer.full_name, "Primary Traveler");
+  const customerPassport = cleanText(customer.passport_number);
+
+  const invoiceMembers = rawInvoiceMembers.map((member, index) => {
+    const resolvedPackageName = cleanText(
+      member.packages?.name,
+      member.package_id ? packageNameMap[member.package_id] : "",
+      fallbackPackageName,
+      "N/A"
+    );
+
+    const resolvedName = cleanText(
+      member.full_name,
+      index === 0 ? customerName : "",
+      `Traveler ${index + 1}`
+    );
+
+    const resolvedPassport = cleanText(
+      member.passport_number,
+      index === 0 ? customerPassport : ""
+    );
+
+    return {
+      ...member,
+      full_name: resolvedName,
+      passport_number: resolvedPassport || null,
+      packages: { name: resolvedPackageName },
+    };
+  });
 
   if (hasFamilySignal && invoiceMembers.length > 0) {
     await generateFamilyInvoice(doc, normalizedBooking, customer, payments, invoiceMembers, logoBase64, sig, qrDataUrl, moallemName);
