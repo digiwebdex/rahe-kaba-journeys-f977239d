@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Calculator, Plus, Trash2, FileDown } from "lucide-react";
+import { Calculator, Plus, Trash2, FileDown, RotateCcw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -45,6 +45,15 @@ export default function AdminCalculatorPage() {
 
   const updateItem = (id: string, field: keyof CostItem, value: string | number) => {
     setItems(items.map(i => i.id === id ? { ...i, [field]: value } : i));
+  };
+
+  const handleReset = () => {
+    setGroupName("");
+    setGroupDate("");
+    setTotalHajji(0);
+    setSellingPricePerPerson(0);
+    setItems(DEFAULT_ITEMS.map(i => ({ ...i, unitPrice: 0 })));
+    toast.success("ক্যালকুলেটর রিসেট হয়েছে");
   };
 
   const costPerPerson = useMemo(() => items.reduce((s, i) => s + Number(i.unitPrice || 0), 0), [items]);
@@ -243,6 +252,9 @@ export default function AdminCalculatorPage() {
           <Calculator className="h-5 w-5 text-primary" />
           Group Cost Calculator
         </h1>
+        <Button size="sm" variant="outline" onClick={handleReset} className="gap-1 text-destructive border-destructive/30 hover:bg-destructive/10">
+          <RotateCcw className="h-4 w-4" /> Reset
+        </Button>
       </div>
 
       {/* Group Info */}
