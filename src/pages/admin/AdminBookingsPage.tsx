@@ -275,12 +275,16 @@ export default function AdminBookingsPage() {
     const shouldUseFamily = isFamilyBooking(normalizedType, existingMembers.length) || travelerCount > 1;
     const fallbackUnit = toMoney(b.selling_price_per_person) || Math.round(toMoney(b.total_amount) / travelerCount);
 
+    // Parse comma/newline/semicolon-separated names and passports from guest_name/guest_passport
+    const parsedNames = (b.guest_name || "").split(/[,;\n]+/).map((n: string) => n.trim()).filter(Boolean);
+    const parsedPassports = (b.guest_passport || "").split(/[,;\n]+/).map((p: string) => p.trim()).filter(Boolean);
+
     const fallbackMembers = Array.from({ length: travelerCount }, (_, index) => {
       const discount = Math.min(index === 0 ? toMoney(b.discount) : 0, fallbackUnit);
       return {
         temp_id: `tmp-${index}-${crypto.randomUUID()}`,
-        full_name: index === 0 ? (b.guest_name || "") : "",
-        passport_number: index === 0 ? (b.guest_passport || "") : "",
+        full_name: parsedNames[index] || "",
+        passport_number: parsedPassports[index] || "",
         package_id: b.package_id || null,
         selling_price: fallbackUnit,
         discount,
