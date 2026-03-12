@@ -51,9 +51,11 @@ export default function AdminCreateBookingPage() {
     Promise.all([
       supabase.from("packages").select("id, name, type, price, duration_days").eq("is_active", true).order("name"),
       supabase.from("moallems").select("id, name, phone, status").eq("status", "active").order("name"),
-    ]).then(([pkgRes, moaRes]) => {
+      supabase.from("accounts" as any).select("*").eq("type", "asset"),
+    ]).then(([pkgRes, moaRes, walletRes]) => {
       setPackages(pkgRes.data || []);
       setMoallems(moaRes.data || []);
+      setWalletAccounts((walletRes.data as any[]) || []);
     });
   }, []);
 
