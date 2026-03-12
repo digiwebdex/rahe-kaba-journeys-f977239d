@@ -186,7 +186,7 @@ export default function AdminBookingsPage() {
   const [bookingPayments, setBookingPayments] = useState<Record<string, any[]>>({});
 
   const fetchBookings = () =>
-    supabase.from("bookings").select("*, packages(name, type, duration_days, price), moallems(name, phone)")
+    supabase.from("bookings").select("*, packages(name, type, duration_days, price, start_date), moallems(name, phone)")
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
         if (error) console.error("fetchBookings error:", error);
