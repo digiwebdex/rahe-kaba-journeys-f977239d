@@ -244,7 +244,10 @@ export default function AdminBookingsPage() {
     }
   };
 
-  const editTotalSelling = editingId ? (Number(editForm.selling_price_per_person || 0) * Number(editForm.num_travelers || 1)) : 0;
+  const isEditingFamily = editForm.booking_type === "family" && editMembers.length > 0;
+  const editTotalSelling = editingId
+    ? (isEditingFamily ? editMembers.reduce((s: number, m: any) => s + Number(m.final_price || 0), 0) : Number(editForm.selling_price_per_person || 0) * Number(editForm.num_travelers || 1))
+    : 0;
   const editTotalCost = editingId ? (Number(editForm.cost_price_per_person || 0) * Number(editForm.num_travelers || 1)) : 0;
   const editTotalCommission = editingId ? (Number(editForm.commission_per_person || 0) * Number(editForm.num_travelers || 1)) : 0;
   const editProfit = editTotalSelling - editTotalCost - editTotalCommission - Number(editForm.extra_expense || 0);
