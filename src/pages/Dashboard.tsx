@@ -150,10 +150,34 @@ const Dashboard = () => {
     setGeneratingPdf(b.id);
     try {
       const bPayments = getBookingPayments(b.id);
-      const company = await getCompanyInfo();
-      await generateInvoice(b, profile || {}, bPayments as InvoicePayment[], company);
+      const [company, bookingRes] = await Promise.all([
+        getCompanyInfo(),
+        supabase
+          .from("bookings")
+          .select("*, packages(name, type, duration_days, start_date, price), booking_members(full_name, passport_number, selling_price, discount, final_price, package_id, packages(name))")
+          .eq("id", b.id)
+          .maybeSingle(),
+      ]);
+
+      const invoiceBooking = bookingRes.data
+        ? { ...b, ...bookingRes.data, packages: bookingRes.data.packages || b.packages }
+        : b;
+      const memberRows = ((bookingRes.data as any)?.booking_members || []) as any[];
+      const isFamily = String(invoiceBooking.booking_type || "").toLowerCase().includes("family")
+        || Number(invoiceBooking.num_travelers || 0) > 1
+        || memberRows.length > 0;
+
+      await generateInvoice(
+        invoiceBooking,
+        profile || {},
+        bPayments as InvoicePayment[],
+        company,
+        { members: memberRows, forceFamily: isFamily }
+      );
       toast.success(t("dashboard.invoiceDownloaded"));
-    } catch { toast.error(t("dashboard.invoiceFailed")); }
+    } catch {
+      toast.error(t("dashboard.invoiceFailed"));
+    }
     setGeneratingPdf(null);
   };
 
