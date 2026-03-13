@@ -136,15 +136,15 @@ const createCrudRoutes = (tableName, options = {}) => {
         const keys = entries.map(([key]) => key);
         const values = entries.map(([, value]) => value);
         const placeholders = keys.map((_, i) => `$${i + 1}`);
-        const result = await query(
-          `INSERT INTO ${tableName} (${keys.map(quote).join(', ')}) VALUES (${placeholders.join(', ')}) RETURNING *`,
-          values
-        );
+        const sql = `INSERT INTO "${tableName}" (${keys.map(quote).join(', ')}) VALUES (${placeholders.join(', ')}) RETURNING *`;
+        console.log(`INSERT into ${tableName}:`, { sql, values, keys });
+        const result = await query(sql, values);
         results.push(result.rows[0]);
       }
 
       res.status(201).json(Array.isArray(req.body) ? results : results[0]);
     } catch (err) {
+      console.error(`POST /${tableName} error:`, err.message, 'Body:', JSON.stringify(req.body).substring(0, 500));
       res.status(500).json({ error: err.message });
     }
   });
