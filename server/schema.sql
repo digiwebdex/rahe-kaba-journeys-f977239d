@@ -504,7 +504,7 @@ CREATE TABLE IF NOT EXISTS notification_logs (
 -- Notification settings
 CREATE TABLE IF NOT EXISTS notification_settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  event_key TEXT NOT NULL,
+  event_key TEXT NOT NULL UNIQUE,
   event_label TEXT NOT NULL,
   enabled BOOLEAN NOT NULL DEFAULT true,
   email_enabled BOOLEAN NOT NULL DEFAULT true,
@@ -1189,6 +1189,17 @@ ON CONFLICT (user_id, role) DO NOTHING;
 -- Default financial summary
 INSERT INTO financial_summary (total_income, total_expense, net_profit)
 SELECT 0, 0, 0 WHERE NOT EXISTS (SELECT 1 FROM financial_summary);
+
+-- Default notification settings
+INSERT INTO notification_settings (event_key, event_label) VALUES
+  ('booking_created', 'Booking Created'),
+  ('booking_confirmed', 'Booking Confirmed'),
+  ('booking_completed', 'Booking Completed'),
+  ('payment_received', 'Payment Received'),
+  ('payment_reminder', 'Payment Reminder'),
+  ('commission_paid', 'Commission Paid'),
+  ('supplier_payment_recorded', 'Supplier Payment Recorded')
+ON CONFLICT DO NOTHING;
 
 -- =============================================
 -- INDEXES
