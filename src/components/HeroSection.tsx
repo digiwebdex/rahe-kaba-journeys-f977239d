@@ -153,12 +153,12 @@ const HeroSection = () => {
                   transition={{ duration: 0.5, delay: 1.1 + i * 0.1 }}
                   className={`flex items-center gap-3 ${i < stats.length - 1 ? "md:border-r md:border-primary/10" : ""} md:pr-4`}
                 >
-                  <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/15 flex items-center justify-center flex-shrink-0">
-                    <IconComp className="h-4.5 w-4.5 text-primary" />
+                  <div className="w-11 h-11 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center flex-shrink-0">
+                    <IconComp className="h-4.5 w-4.5 text-gold-light" />
                   </div>
                   <div>
-                    <p className="text-xl sm:text-2xl font-heading font-bold text-foreground leading-none">{stat.value}</p>
-                    <p className="text-[11px] text-muted-foreground mt-1">{stat.label}</p>
+                    <p className="text-xl sm:text-2xl font-heading font-bold text-white leading-none">{stat.value}</p>
+                    <p className="text-[11px] text-white/60 mt-1">{stat.label}</p>
                   </div>
                 </motion.div>
               );
