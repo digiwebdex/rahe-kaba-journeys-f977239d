@@ -101,7 +101,7 @@ const HeroSection = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.7 }}
-            className="text-sm sm:text-base text-muted-foreground mt-3 tracking-wide"
+            className="text-sm sm:text-base text-white/70 mt-3 tracking-wide"
           >
             — (সূরা আল-বাকারা: ১৯৬)
           </motion.p>
