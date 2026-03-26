@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/api";
 import { toast } from "sonner";
-import { Bell, Mail, MessageSquare, Loader2, Plus, Pencil, Trash2, X, Check } from "lucide-react";
+import { Bell, Mail, MessageSquare, Loader2, Plus, Pencil, Trash2, X, Check, Save, Eye, EyeOff, Settings2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,13 @@ interface NotificationSetting {
   sms_enabled: boolean;
 }
 
+interface ApiConfig {
+  resend_api_key: string;
+  notification_from_email: string;
+  bulksmsbd_api_key: string;
+  bulksmsbd_sender_id: string;
+}
+
 export default function NotificationSettingsManager() {
   const [settings, setSettings] = useState<NotificationSetting[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,6 +31,17 @@ export default function NotificationSettingsManager() {
   const [editItem, setEditItem] = useState<NotificationSetting | null>(null);
   const [form, setForm] = useState({ event_key: "", event_label: "" });
   const [deleting, setDeleting] = useState<string | null>(null);
+
+  // API Config state
+  const [apiConfig, setApiConfig] = useState<ApiConfig>({
+    resend_api_key: "",
+    notification_from_email: "",
+    bulksmsbd_api_key: "",
+    bulksmsbd_sender_id: "",
+  });
+  const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [configLoaded, setConfigLoaded] = useState(false);
 
   const fetchSettings = async () => {
     setLoading(true);
@@ -39,7 +57,65 @@ export default function NotificationSettingsManager() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchSettings(); }, []);
+  const fetchApiConfig = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("company_settings" as any)
+        .select("*")
+        .eq("setting_key", "notification_api_config");
+      if (!error && data && data.length > 0) {
+        const val = typeof data[0].setting_value === 'string' ? JSON.parse(data[0].setting_value) : data[0].setting_value;
+        setApiConfig({
+          resend_api_key: val.resend_api_key || "",
+          notification_from_email: val.notification_from_email || "",
+          bulksmsbd_api_key: val.bulksmsbd_api_key || "",
+          bulksmsbd_sender_id: val.bulksmsbd_sender_id || "",
+        });
+      }
+    } catch (e) {
+      console.error("Failed to load API config:", e);
+    }
+    setConfigLoaded(true);
+  };
+
+  useEffect(() => {
+    fetchSettings();
+    fetchApiConfig();
+  }, []);
+
+  const handleSaveApiConfig = async () => {
+    setSavingConfig(true);
+    try {
+      // Check if setting exists
+      const { data: existing } = await supabase
+        .from("company_settings" as any)
+        .select("id")
+        .eq("setting_key", "notification_api_config");
+
+      if (existing && existing.length > 0) {
+        const { error } = await supabase
+          .from("company_settings" as any)
+          .update({
+            setting_value: apiConfig as any,
+            updated_at: new Date().toISOString(),
+          } as any)
+          .eq("id", existing[0].id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("company_settings" as any)
+          .insert({
+            setting_key: "notification_api_config",
+            setting_value: apiConfig as any,
+          } as any);
+        if (error) throw error;
+      }
+      toast.success("API configuration saved! Update server .env to apply changes.");
+    } catch (e: any) {
+      toast.error("Failed to save API config: " + e.message);
+    }
+    setSavingConfig(false);
+  };
 
   const handleToggle = async (id: string, field: "enabled" | "email_enabled" | "sms_enabled", value: boolean) => {
     setSaving(id + field);
@@ -138,6 +214,16 @@ export default function NotificationSettingsManager() {
     return channels.length ? channels.join(" + ") : "No channel";
   };
 
+  const toggleKeyVisibility = (key: string) => {
+    setShowKeys((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const maskValue = (val: string) => {
+    if (!val) return "";
+    if (val.length <= 8) return "••••••••";
+    return val.substring(0, 4) + "••••" + val.substring(val.length - 4);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12 text-muted-foreground">
@@ -147,8 +233,104 @@ export default function NotificationSettingsManager() {
   }
 
   return (
-    <div className="space-y-5">
-      {/* Header with Add button */}
+    <div className="space-y-6">
+      {/* ===== API Configuration Section ===== */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Settings2 className="h-4 w-4 text-primary" /> API Configuration
+          </p>
+          <Button size="sm" onClick={handleSaveApiConfig} disabled={savingConfig}>
+            {savingConfig ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+            Save Config
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Email Provider */}
+          <div className="bg-secondary/30 rounded-lg p-4 space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Mail className="h-4 w-4 text-primary" />
+              <p className="font-semibold text-sm">Email Provider (Resend)</p>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">RESEND API Key</label>
+              <div className="relative">
+                <Input
+                  type={showKeys.resend ? "text" : "password"}
+                  placeholder="re_xxxxxxxxxxxx"
+                  value={apiConfig.resend_api_key}
+                  onChange={(e) => setApiConfig({ ...apiConfig, resend_api_key: e.target.value })}
+                  className="pr-10 text-xs"
+                />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => toggleKeyVisibility("resend")}
+                >
+                  {showKeys.resend ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">From Email</label>
+              <Input
+                type="email"
+                placeholder="noreply@yourdomain.com"
+                value={apiConfig.notification_from_email}
+                onChange={(e) => setApiConfig({ ...apiConfig, notification_from_email: e.target.value })}
+                className="text-xs"
+              />
+            </div>
+          </div>
+
+          {/* SMS Provider */}
+          <div className="bg-secondary/30 rounded-lg p-4 space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <MessageSquare className="h-4 w-4 text-primary" />
+              <p className="font-semibold text-sm">SMS Provider (BulkSMSBD)</p>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">BulkSMSBD API Key</label>
+              <div className="relative">
+                <Input
+                  type={showKeys.sms ? "text" : "password"}
+                  placeholder="Enter API key"
+                  value={apiConfig.bulksmsbd_api_key}
+                  onChange={(e) => setApiConfig({ ...apiConfig, bulksmsbd_api_key: e.target.value })}
+                  className="pr-10 text-xs"
+                />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => toggleKeyVisibility("sms")}
+                >
+                  {showKeys.sms ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Sender ID</label>
+              <Input
+                type="text"
+                placeholder="e.g. RaheKaba"
+                value={apiConfig.bulksmsbd_sender_id}
+                onChange={(e) => setApiConfig({ ...apiConfig, bulksmsbd_sender_id: e.target.value })}
+                className="text-xs"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+          <p className="text-xs text-muted-foreground">
+            <strong className="text-foreground">Note:</strong> These API keys are stored securely in the database. 
+            After saving, update the corresponding environment variables on the server (<code className="text-primary">RESEND_API_KEY</code>, <code className="text-primary">BULKSMSBD_API_KEY</code>, <code className="text-primary">BULKSMSBD_SENDER_ID</code>, <code className="text-primary">NOTIFICATION_FROM_EMAIL</code>) and restart the service.
+          </p>
+        </div>
+      </div>
+
+      {/* ===== Triggers Section ===== */}
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-foreground">Automated Triggers</p>
         <Button size="sm" onClick={() => { setForm({ event_key: "", event_label: "" }); setShowAddDialog(true); }}>
@@ -169,7 +351,6 @@ export default function NotificationSettingsManager() {
               className={`bg-secondary/50 border border-border rounded-lg p-4 transition-opacity ${!s.enabled ? "opacity-50" : ""}`}
             >
               <div className="flex items-center justify-between gap-4 flex-wrap">
-                {/* Left: Toggle + Label */}
                 <div className="flex items-center gap-3 min-w-[200px]">
                   <Switch
                     checked={s.enabled}
@@ -182,7 +363,6 @@ export default function NotificationSettingsManager() {
                   </div>
                 </div>
 
-                {/* Right: Channel toggles + actions */}
                 <div className="flex items-center gap-4">
                   {s.enabled && (
                     <>
@@ -226,26 +406,6 @@ export default function NotificationSettingsManager() {
           ))}
         </div>
       )}
-
-      {/* Provider info */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="bg-secondary/30 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Mail className="h-4 w-4 text-primary" />
-            <p className="font-semibold text-sm">Email Provider</p>
-          </div>
-          <p className="text-xs text-muted-foreground">Resend API — configured via RESEND_API_KEY secret</p>
-          <p className="text-xs text-muted-foreground mt-1">From: NOTIFICATION_FROM_EMAIL secret</p>
-        </div>
-        <div className="bg-secondary/30 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <MessageSquare className="h-4 w-4 text-primary" />
-            <p className="font-semibold text-sm">SMS Provider</p>
-          </div>
-          <p className="text-xs text-muted-foreground">BulkSMSBD — configured via BULKSMSBD_API_KEY secret</p>
-          <p className="text-xs text-muted-foreground mt-1">Sender ID: BULKSMSBD_SENDER_ID secret</p>
-        </div>
-      </div>
 
       <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
         <p className="text-xs text-muted-foreground">

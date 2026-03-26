@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/api";
 import { toast } from "sonner";
 import { Database, Download, Upload, Trash2, RefreshCw, Shield, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,12 +8,23 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+const API_URL = import.meta.env.VITE_API_URL || '/api';
+
 interface BackupFile {
   name: string;
-  id: string;
   created_at: string;
-  metadata: Record<string, any> | null;
+  size: number;
 }
+
+const getToken = () => localStorage.getItem("rk_access_token");
+
+const authHeaders = () => {
+  const token = getToken();
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
 
 export default function BackupRestoreManager() {
   const [backups, setBackups] = useState<BackupFile[]>([]);
@@ -25,11 +35,14 @@ export default function BackupRestoreManager() {
 
   const fetchBackups = async () => {
     setLoading(true);
-    const { data, error } = await supabase.storage.from("site-backups").list("", {
-      sortBy: { column: "created_at", order: "desc" },
-    });
-    if (error) { toast.error("Failed to load backups"); console.error(error); }
-    else setBackups((data || []).filter(f => f.name.endsWith(".json")) as BackupFile[]);
+    try {
+      const res = await fetch(`${API_URL}/backup/list`, { headers: authHeaders() });
+      if (!res.ok) throw new Error("Failed to load backups");
+      const data = await res.json();
+      setBackups(data || []);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
     setLoading(false);
   };
 
@@ -40,15 +53,18 @@ export default function BackupRestoreManager() {
     setProgress(10);
     try {
       const interval = setInterval(() => setProgress(p => Math.min(p + 8, 90)), 500);
-
-      const { data, error } = await supabase.functions.invoke("site-backup");
+      const res = await fetch(`${API_URL}/backup/create`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
       clearInterval(interval);
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Backup failed");
+      }
+      const data = await res.json();
       setProgress(100);
-      toast.success(`Backup successful! ${data.stats?.length || 0} tables saved`);
+      toast.success(`Backup successful! ${data.tables || 0} tables saved`);
       fetchBackups();
     } catch (e: any) {
       toast.error(`Backup failed: ${e.message}`);
@@ -63,18 +79,19 @@ export default function BackupRestoreManager() {
     setProgress(10);
     try {
       const interval = setInterval(() => setProgress(p => Math.min(p + 5, 90)), 800);
-
-      const { data, error } = await supabase.functions.invoke("site-restore", {
-        body: { fileName, mode },
+      const res = await fetch(`${API_URL}/backup/restore`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ fileName, mode }),
       });
       clearInterval(interval);
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Restore failed");
+      }
+      const data = await res.json();
       setProgress(100);
-      const restored = data.results?.filter((r: any) => r.status === "restored").length || 0;
-      toast.success(`Restore successful! ${restored} tables restored`);
+      toast.success(`Restore successful! ${data.restored || 0} tables restored`);
     } catch (e: any) {
       toast.error(`Restore failed: ${e.message}`);
     } finally {
@@ -84,21 +101,37 @@ export default function BackupRestoreManager() {
   };
 
   const deleteBackup = async (fileName: string) => {
-    const { error } = await supabase.storage.from("site-backups").remove([fileName]);
-    if (error) { toast.error("Delete failed"); return; }
-    toast.success("Backup deleted");
-    fetchBackups();
+    try {
+      const res = await fetch(`${API_URL}/backup/delete`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ fileName }),
+      });
+      if (!res.ok) throw new Error("Delete failed");
+      toast.success("Backup deleted");
+      fetchBackups();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   const downloadBackup = async (fileName: string) => {
-    const { data, error } = await supabase.storage.from("site-backups").download(fileName);
-    if (error || !data) { toast.error("Download failed"); return; }
-    const url = URL.createObjectURL(data);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const token = getToken();
+      const res = await fetch(`${API_URL}/backup/download?file=${encodeURIComponent(fileName)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   const formatSize = (bytes: number) => {
@@ -117,7 +150,6 @@ export default function BackupRestoreManager() {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Database className="h-5 w-5 text-primary" />
@@ -137,7 +169,6 @@ export default function BackupRestoreManager() {
         </div>
       </div>
 
-      {/* Progress */}
       {progress > 0 && (
         <div className="space-y-1">
           <Progress value={progress} className="h-2" />
@@ -147,13 +178,11 @@ export default function BackupRestoreManager() {
         </div>
       )}
 
-      {/* Warning */}
       <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 flex items-start gap-2 text-sm text-destructive">
         <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
         <p><strong>Warning:</strong> "Full Restore" will delete all current data and reload from backup. "Merge" will only add/update data without deleting existing records.</p>
       </div>
 
-      {/* Backup List */}
       <div className="space-y-2">
         {backups.length === 0 && !loading && (
           <p className="text-center text-muted-foreground py-12">No backups found. Click "New Backup" above to create one.</p>
@@ -166,16 +195,14 @@ export default function BackupRestoreManager() {
               <div className="min-w-0">
                 <p className="font-medium text-sm truncate">{b.name}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {formatDate(b.created_at)} • {formatSize(b.metadata?.size)}
+                  {formatDate(b.created_at)} • {formatSize(b.size)}
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                {/* Download */}
                 <Button variant="outline" size="sm" onClick={() => downloadBackup(b.name)}>
                   <Download className="h-3.5 w-3.5 mr-1" /> Download
                 </Button>
 
-                {/* Merge Restore */}
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="outline" size="sm" disabled={!!restoring}>
@@ -198,7 +225,6 @@ export default function BackupRestoreManager() {
                   </AlertDialogContent>
                 </AlertDialog>
 
-                {/* Full Restore */}
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="destructive" size="sm" disabled={!!restoring}>
@@ -224,7 +250,6 @@ export default function BackupRestoreManager() {
                   </AlertDialogContent>
                 </AlertDialog>
 
-                {/* Delete */}
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
